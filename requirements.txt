@@ -1,0 +1,14 @@
+python-docx>=1.2.0
+selenium
+webdriver-manager
+beautifulsoup4
+lxml
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+openai
+pypdf
+numpy
+requests
+google-generativeai

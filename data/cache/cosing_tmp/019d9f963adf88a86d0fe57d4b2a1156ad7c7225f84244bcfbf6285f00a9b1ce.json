@@ -1,0 +1,46 @@
+{
+  "cached_at": 1774424867.9547102,
+  "payload": {
+    "request_id": "REQ-smoke-002",
+    "source": "EU_COSING",
+    "substances": [
+      {
+        "substance_name": "SALICYLIC ACID",
+        "inci_name": "SALICYLIC ACID",
+        "cas": "69-72-7",
+        "function": "200-712-3",
+        "restrictions": "III/98 V/3",
+        "reference_url": "https://ec.europa.eu/growth/tools-databases/cosing/advanced",
+        "fetched_at": "2026-03-25T07:47:45.687202+00:00"
+      },
+      {
+        "substance_name": "CAPRYLOYL SALICYLIC ACID",
+        "inci_name": "CAPRYLOYL SALICYLIC ACID",
+        "cas": "70424-62-3",
+        "function": "",
+        "restrictions": "",
+        "reference_url": "https://ec.europa.eu/growth/tools-databases/cosing/advanced",
+        "fetched_at": "2026-03-25T07:47:45.687202+00:00"
+      },
+      {
+        "substance_name": "Salicylic acid and its salts",
+        "inci_name": "Salicylic acid and its salts",
+        "cas": "69-72-7",
+        "function": "200-712-3[1]/ 212-525-4[2]/ 242-669-3[3]/ 261-963-2[4]/ 200-198-0[5]/ 209-421-6[6]/ 218-531-3[7]",
+        "restrictions": "V 3",
+        "reference_url": "https://ec.europa.eu/growth/tools-databases/cosing/advanced",
+        "fetched_at": "2026-03-25T07:47:45.687202+00:00"
+      },
+      {
+        "substance_name": "3(or5)-[[4-[(7-amino-1-hydroxy-3-sulphonato-2-naphthyl)azo]-1-naphthyl]azo]salicylic acid and its salts, when used as a substance in hair dye products",
+        "inci_name": "3(or5)-[[4-[(7-amino-1-hydroxy-3-sulphonato-2-naphthyl)azo]-1-naphthyl]azo]salicylic acid and its salts, when used as a substance in hair dye products",
+        "cas": "3442-21-5",
+        "function": "222-351-0 / 252-305-5",
+        "restrictions": "II 1266",
+        "reference_url": "https://ec.europa.eu/growth/tools-databases/cosing/advanced",
+        "fetched_at": "2026-03-25T07:47:45.687202+00:00"
+      }
+    ],
+    "status": "OK"
+  }
+}
