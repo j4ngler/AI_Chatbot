@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup  # type: ignore
 
@@ -10,6 +10,23 @@ from .schemas import Substance
 
 
 CAS_RE = re.compile(r"\b(\d{2,7}-\d{2}-\d)\b")
+# EC inventory format (EU): 200-289-5 (3-3-1), khác CAS thường có nhóm giữa 2 chữ số.
+EC_LIKE_STANDALONE = re.compile(r"^\d{2,3}-\d{2,3}-\d$")
+
+# CoSIng result rows often link to substance detail pages (deep link for users).
+_DEFAULT_DETAIL_BASE = "https://ec.europa.eu"
+
+
+def _row_cosing_detail_url(row, base_url: str = _DEFAULT_DETAIL_BASE) -> Optional[str]:
+    base = f"{base_url.rstrip('/')}/"
+    for a in row.find_all("a", href=True):
+        href = (a.get("href") or "").strip()
+        if not href or href.startswith("#"):
+            continue
+        low = href.lower()
+        if "cosing/details" in low or "/growth/tools-databases/cosing/" in low and "/details/" in low:
+            return urljoin(base, href)
+    return None
 
 
 def _norm_cell(s: str) -> str:
@@ -33,6 +50,8 @@ def _header_map(headers: List[str]) -> Dict[str, int]:
             idx["substance_name"] = i
         elif "inci" in h:
             idx["inci_name"] = i
+        elif re.search(r"\bec\b|ec\s*#|ec\s*no|einecs|elincs", h):
+            idx["ec"] = i
         elif "cas" in h:
             idx["cas"] = i
         elif "function" in h:
@@ -42,13 +61,20 @@ def _header_map(headers: List[str]) -> Dict[str, int]:
     return idx
 
 
-def parse_cosing_results_table(html: str, reference_url: str) -> List[Substance]:
+def parse_cosing_results_table(
+    html: str,
+    reference_url: str,
+    *,
+    detail_base_url: str = _DEFAULT_DETAIL_BASE,
+) -> List[Substance]:
     """
     Parse CoSIng advanced results table HTML -> list[Substance].
 
     Heuristics:
     - Identify the first table with a header row containing relevant keywords.
     - Then map columns either by header fuzzy matching or by positional fallbacks.
+    - If a row contains a link to .../cosing/details/..., use that as ``reference_url`` so
+      the user opens the substance page directly instead of the generic advanced search.
     """
     soup = BeautifulSoup(html, "lxml")
     tables = soup.find_all("table")
@@ -95,25 +121,59 @@ def parse_cosing_results_table(html: str, reference_url: str) -> List[Substance]
                 return values[fallback_pos]
             return ""
 
+        ncol = len(values)
+
         substance_name = get("substance_name", 0)
         inci_name = get("inci_name", 1)
         cas_raw = get("cas", 2)
         cas = _maybe_cas(cas_raw)
-        function = get("function", 3)
-        restrictions = get("restrictions", 4)
+
+        ec = ""
+        function = ""
+        restrictions = ""
+
+        # Bảng advanced thường 6 cột; một số view chỉ 5 cột (EC + Function gộp kiểu lệch header).
+        if ncol >= 6:
+            ec = _norm_cell(get("ec", 3))
+            function = _norm_cell(get("function", 4))
+            restrictions = _norm_cell(get("restrictions", 5))
+        elif ncol == 5:
+            v3 = _norm_cell(values[3])
+            v4 = _norm_cell(values[4])
+            if EC_LIKE_STANDALONE.match(v3):
+                ec = v3
+                if v4 and not EC_LIKE_STANDALONE.match(v4):
+                    function = v4
+                    restrictions = ""
+                else:
+                    function = ""
+                    restrictions = v4
+            else:
+                function = _norm_cell(get("function", 3))
+                restrictions = _norm_cell(get("restrictions", 4))
+        else:
+            function = _norm_cell(get("function", 3))
+            restrictions = _norm_cell(get("restrictions", 4))
 
         # If the table uses a different column order, still try to salvage CAS.
         if not cas and any("cas" in (c or "").lower() for c in values):
             cas = _maybe_cas(" ".join(values))
 
+        # An toàn: EC lọt vào cột function khi header lệch.
+        if function and EC_LIKE_STANDALONE.match(function) and not ec:
+            ec = function
+            function = ""
+
+        row_ref = _row_cosing_detail_url(r, detail_base_url) or reference_url
         substances.append(
             Substance(
                 substance_name=substance_name,
                 inci_name=inci_name,
                 cas=cas,
+                ec=ec,
                 function=function,
                 restrictions=restrictions,
-                reference_url=reference_url,
+                reference_url=row_ref,
             )
         )
     return substances
@@ -173,6 +233,10 @@ def parse_cosing_detail_page(html: str, reference_url: str) -> Dict[str, str]:
             label_to_value["regulation"] = value_text
         elif "annex" in label and "ref" in label:
             label_to_value["annex_ref"] = value_text
+        elif "maximum" in label and ("concentration" in label or "conc" in label):
+            label_to_value["max_concentration"] = value_text
+        elif "glossary" in label and ("common" in label or "ingredient" in label):
+            label_to_value["glossary_name"] = value_text
 
     # Some pages put Annex/Ref in the header section rather than label-value rows.
     # Fallback: search visible text patterns.
@@ -181,6 +245,15 @@ def parse_cosing_detail_page(html: str, reference_url: str) -> Dict[str, str]:
         m = re.search(r"\b([IVX]{1,5})\s*/\s*\d+\b", page_text)
         if m:
             label_to_value["annex_ref"] = m.group(0)
+
+    if "max_concentration" not in label_to_value:
+        m = re.search(
+            r"maximum\s+concentration[^:]{0,120}:\s*([^\n]+?)(?:\n|$)",
+            page_text,
+            re.IGNORECASE,
+        )
+        if m:
+            label_to_value["max_concentration"] = norm(m.group(1))
 
     # If SCCS opinions were not captured by table heuristics,
     # try a secondary strategy by locating the label text in the DOM.
@@ -230,6 +303,8 @@ def parse_cosing_detail_page(html: str, reference_url: str) -> Dict[str, str]:
         "annex_ref": label_to_value.get("annex_ref", ""),
         "functions": label_to_value.get("functions", ""),
         "sccs_opinions": label_to_value.get("sccs_opinions", ""),
+        "max_concentration": label_to_value.get("max_concentration", ""),
+        "glossary_name": label_to_value.get("glossary_name", ""),
     }
     return out
 

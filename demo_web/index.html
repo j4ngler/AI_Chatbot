@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <title>Trợ lý tra cứu thông minh</title>
+  <style>
+    :root {
+      --bg: #0b1018;
+      --panel: #182334;
+      --panel-2: #223046;
+      --border: #2b3d57;
+      --text: #e8edf6;
+      --muted: #9db0c7;
+      --law: #3d8bfd;
+      --cos: #8b5cf6;
+      --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      height: 100vh;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 700px at -5% -10%, #1a2b46 0%, transparent 48%),
+        radial-gradient(900px 450px at 105% -5%, #26193f 0%, transparent 45%),
+        var(--bg);
+    }
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 290px 1fr;
+    }
+    .app.sidebar-collapsed { grid-template-columns: 72px 1fr; }
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: rgba(17, 26, 39, 0.92);
+      padding: 0.9rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .sidebar-top { display: flex; flex-direction: column; min-height: 0; }
+    .brand { font-size: 1.02rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .new-chat {
+      border: 1px solid #4a6d99;
+      background: linear-gradient(180deg, #2a4770 0%, #203a5d 100%);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 0.7rem 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+    }
+    .new-chat:hover { filter: brightness(1.08); }
+    .history-search {
+      margin-top: 0.7rem;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0f1826;
+      color: var(--text);
+      font-size: 0.84rem;
+      padding: 0.55rem 0.65rem;
+    }
+    .side-content {
+      margin-top: 0.7rem;
+      min-height: 0;
+      overflow: auto;
+      padding-right: 0.2rem;
+    }
+    .session-item {
+      border: 1px solid var(--border);
+      background: #0f1826;
+      border-radius: 10px;
+      padding: 0.62rem 0.68rem;
+      cursor: pointer;
+      margin-bottom: 0.45rem;
+      position: relative;
+    }
+    .session-item.active {
+      border-color: #4b6a93;
+      background: #18263b;
+      box-shadow: inset 3px 0 0 0 #65a7ff;
+      padding-left: 0.55rem;
+    }
+    .session-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .session-meta { margin-top: 0.2rem; font-size: 0.75rem; color: var(--muted); }
+    .session-delete {
+      position: absolute;
+      top: 0.38rem;
+      right: 0.38rem;
+      width: 22px;
+      height: 22px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #121d2c;
+      color: var(--muted);
+      font-size: 0.72rem;
+      display: none;
+      cursor: pointer;
+    }
+    .session-item:hover .session-delete { display: inline-flex; align-items: center; justify-content: center; }
+    .session-rename {
+      position: absolute;
+      top: 0.38rem;
+      right: 1.88rem;
+      width: 22px;
+      height: 22px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #121d2c;
+      color: var(--muted);
+      font-size: 0.72rem;
+      display: none;
+      cursor: pointer;
+    }
+    .session-item:hover .session-rename { display: inline-flex; align-items: center; justify-content: center; }
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 0.7rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .account-btn, .collapse-btn {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #101a28;
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding: 0.5rem 0.62rem;
+      text-align: left;
+      cursor: pointer;
+    }
+    .account-btn:hover, .collapse-btn:hover { background: #17263b; color: var(--text); }
+    .app.sidebar-collapsed .brand,
+    .app.sidebar-collapsed .history-search,
+    .app.sidebar-collapsed .session-title,
+    .app.sidebar-collapsed .session-meta,
+    .app.sidebar-collapsed .account-btn {
+      display: none;
+    }
+    .app.sidebar-collapsed .sidebar { padding: 0.6rem; }
+    .app.sidebar-collapsed .new-chat,
+    .app.sidebar-collapsed .collapse-btn {
+      text-align: center;
+      padding: 0.62rem 0.3rem;
+    }
+    .app.sidebar-collapsed .new-chat::after { content: "+"; font-size: 1.05rem; font-weight: 800; }
+    .app.sidebar-collapsed .new-chat { font-size: 0; }
+    .app.sidebar-collapsed .collapse-btn { font-size: 0; }
+    .app.sidebar-collapsed .collapse-btn::after { content: "»"; font-size: 1rem; color: var(--text); }
+    .hidden { display: none !important; }
+    .main { min-height: 0; display: grid; grid-template-rows: auto 1fr auto; }
+    .topbar {
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      background: rgba(17, 26, 39, 0.5);
+    }
+    .topbar h1 { margin: 0; font-size: 1.05rem; }
+    .topbar p { margin: 0.12rem 0 0; color: var(--muted); font-size: 0.82rem; }
+    .mode-badge {
+      font-size: 0.78rem;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      background: #0f1826;
+      border-radius: 999px;
+      padding: 0.28rem 0.62rem;
+    }
+    .chat-scroll {
+      min-height: 0;
+      overflow: auto;
+      padding: 1rem;
+      max-width: 980px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .empty-state { margin-top: 3vh; text-align: center; color: var(--muted); }
+    .empty-state h2 { margin: 0 0 0.35rem; color: var(--text); font-size: 1.3rem; }
+    .suggest-grid {
+      margin-top: 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.62rem;
+    }
+    .suggest-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.68rem 0.75rem;
+      background: #17263b;
+      text-align: left;
+      color: var(--text);
+      font-size: 0.87rem;
+      cursor: pointer;
+    }
+    .suggest-card:hover { background: #20324c; }
+    .row { display: flex; margin-bottom: 0.9rem; }
+    .row.user { justify-content: flex-end; }
+    .row-inner {
+      display: flex;
+      gap: 0.45rem;
+      align-items: flex-end;
+      max-width: min(88%, 860px);
+    }
+    .row.user .row-inner { flex-direction: row-reverse; }
+    .avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      color: #dbe8f7;
+      background: #131f31;
+      flex: 0 0 auto;
+      margin-bottom: 2px;
+    }
+    .avatar.user { background: #28456a; border-color: #3e648f; }
+    .avatar.bot { background: #2e1f4f; border-color: #53407e; }
+    .bubble {
+      max-width: min(82%, 760px);
+      border-radius: 14px;
+      padding: 0.72rem 0.85rem;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.96rem;
+    }
+    .row.user .bubble { background: #1f3554; border-color: #365882; }
+    .row.assistant .bubble { background: #17263a; }
+    .bubble-time {
+      margin-top: 0.35rem;
+      font-size: 0.73rem;
+      color: var(--muted);
+      text-align: right;
+    }
+    .msg-meta { margin-top: 0.35rem; font-size: 0.75rem; color: var(--muted); }
+    .actions { margin-top: 0.5rem; display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .actions button {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #0f1826;
+      color: var(--text);
+      padding: 0.26rem 0.55rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .actions button:hover { background: #17263b; }
+    .refs {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .ref-chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.74rem;
+      color: #c8d6e8;
+      background: #101b2a;
+    }
+    a.ref-chip {
+      color: #8ec5ff;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    a.ref-chip:hover { background: #1a2a40; border-color: #4b6a93; }
+    .cosing-ref-block {
+      margin-top: 0.75rem;
+      padding: 0.85rem 1rem 1rem;
+      border-radius: 14px;
+      border: 1px solid rgba(139, 92, 246, 0.45);
+      background: linear-gradient(165deg, rgba(48, 33, 79, 0.55) 0%, rgba(15, 24, 38, 0.95) 100%);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .cosing-ref-title {
+      font-size: 0.98rem;
+      font-weight: 800;
+      color: #e8e0ff;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.55rem;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .cosing-ref-title::before {
+      content: "◇";
+      color: var(--cos);
+      font-size: 1.05rem;
+    }
+    .cosing-ref-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-bottom: 0.65rem;
+    }
+    .cosing-ref-summary .ref-chip-lg {
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 0.38rem 0.75rem;
+      border-radius: 10px;
+      border-color: #4a3d6b;
+      background: rgba(20, 28, 45, 0.9);
+      color: #e4ecfa;
+      max-width: 100%;
+      word-break: break-word;
+    }
+    .cosing-ref-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: stretch;
+    }
+    a.cosing-link-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0.5rem 1.15rem;
+      font-size: 0.92rem;
+      font-weight: 700;
+      border-radius: 12px;
+      border: 1px solid rgba(139, 92, 246, 0.65);
+      background: linear-gradient(180deg, #3d2a66 0%, #2a1f47 100%);
+      color: #f5f0ff !important;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      transition: filter 0.15s ease, transform 0.12s ease;
+    }
+    a.cosing-link-btn:hover {
+      filter: brightness(1.12);
+      transform: translateY(-1px);
+      border-color: #9d7ae8;
+    }
+    .skeleton { position: relative; overflow: hidden; min-height: 78px; }
+    .skeleton::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.09) 50%, transparent 80%);
+      transform: translateX(-120%);
+      animation: shimmer 1.3s infinite;
+    }
+    @keyframes shimmer { to { transform: translateX(120%); } }
+    .input-wrap {
+      border-top: 1px solid var(--border);
+      padding: 0.8rem 1rem 1rem;
+      background: rgba(10, 16, 24, 0.94);
+    }
+    .composer {
+      max-width: 980px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #121d2c;
+      padding: 0.55rem;
+    }
+    .mode-switch { display: flex; gap: 0.35rem; margin-bottom: 0.48rem; }
+    .mode-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 0.32rem 0.62rem;
+      background: #0d1521;
+      color: var(--muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .mode-btn.active { color: #fff; background: #1e2f47; box-shadow: inset 0 0 0 1px #345985; }
+    .mode-btn.cos.active { background: #30214f; box-shadow: inset 0 0 0 1px #5b3ea1; }
+    .composer-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: end; }
+    #input {
+      border-radius: 11px;
+      border: 1px solid var(--border);
+      background: #0f1826;
+      color: var(--text);
+      font-size: 1rem;
+      padding: 0.72rem 0.8rem;
+      min-height: 46px;
+      max-height: 180px;
+      resize: none;
+      overflow: auto;
+      font-family: inherit;
+    }
+    #input:focus { outline: 2px solid var(--law); outline-offset: 1px; }
+    .mode-cos #input:focus { outline-color: var(--cos); }
+    .send {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      border: none;
+      background: var(--law);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .mode-cos .send { background: var(--cos); }
+    .send.send-stop {
+      background: #b45348;
+      font-size: 0.85rem;
+      letter-spacing: 0;
+    }
+    .mode-cos .send.send-stop { background: #a3478f; }
+    .send.send-stop:hover { filter: brightness(1.08); }
+    .send:disabled { opacity: 0.55; cursor: not-allowed; }
+    .send.send-stop:disabled { opacity: 1; cursor: pointer; }
+    .sub-note { margin-top: 0.45rem; color: var(--muted); font-size: 0.78rem; }
+    .error { margin-top: 0.4rem; font-size: 0.83rem; color: var(--danger); }
+    .scroll-bottom {
+      position: fixed;
+      right: 18px;
+      bottom: 110px;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #17263a;
+      color: #d7e6f6;
+      font-size: 1rem;
+      cursor: pointer;
+      z-index: 20;
+      display: none;
+    }
+    .scroll-bottom.visible { display: inline-flex; align-items: center; justify-content: center; }
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .chat-scroll { padding: 0.8rem 0.7rem; }
+      .bubble { max-width: 92%; }
+      .input-wrap { padding: 0.65rem 0.75rem 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="brand">Trợ lý AI Tra Cứu</div>
+        <button class="new-chat" id="newChatBtn">+ Đoạn chat mới</button>
+        <input id="historySearch" class="history-search" type="text" placeholder="Tìm đoạn chat..." />
+        <div class="side-content" id="historyBox"></div>
+      </div>
+      <div class="sidebar-footer">
+        <button class="account-btn" type="button">Tài khoản: Người dùng</button>
+        <button class="collapse-btn" id="collapseSidebarBtn" type="button">Thu gọn thanh bên</button>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h1>Trò chuyện với trợ lý tra cứu</h1>
+          <p>Nhập câu hỏi pháp luật hoặc tên thành phần mỹ phẩm để tra cứu.</p>
+        </div>
+        <div class="mode-badge" id="modeBadge">Chế độ: Pháp luật</div>
+      </div>
+      <div class="chat-scroll" id="chatScroll">
+        <div class="empty-state" id="emptyState">
+          <h2>Xin chào, bạn muốn tra cứu gì hôm nay?</h2>
+          <div>Chọn một gợi ý để bắt đầu nhanh:</div>
+          <div class="suggest-grid">
+            <button class="suggest-card" data-mode="law" data-q="Giấy phép lái xe có những hạng nào?">Giấy phép lái xe có những hạng nào?</button>
+            <button class="suggest-card" data-mode="law" data-q="Người lái xe có được dùng điện thoại khi đang điều khiển phương tiện không?">Lái xe dùng điện thoại có bị cấm không?</button>
+            <button class="suggest-card" data-mode="cosing" data-q="Salicylic Acid">Tra cứu Salicylic Acid trên CoSIng</button>
+            <button class="suggest-card" data-mode="cosing" data-q="Niacinamide">Tra cứu Niacinamide trên CoSIng</button>
+          </div>
+        </div>
+        <div id="messages"></div>
+      </div>
+      <div class="input-wrap" id="inputWrap">
+        <div class="composer">
+          <div class="mode-switch">
+            <button class="mode-btn active" id="modeLaw">Pháp luật</button>
+            <button class="mode-btn cos" id="modeCosing">CoSIng</button>
+          </div>
+          <div class="composer-row">
+            <textarea id="input" placeholder="Nhập câu hỏi của bạn..."></textarea>
+            <button class="send" id="sendBtn" title="Gửi" disabled>➤</button>
+          </div>
+          <div class="sub-note" id="subNote">Mẹo: Enter để gửi, Shift+Enter để xuống dòng.</div>
+          <div class="error hidden" id="error"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <button id="scrollBottomBtn" class="scroll-bottom" title="Xuống tin mới nhất">↓</button>
+  <script>
+    (function () {
+      const STORAGE_KEY = "chat_demo_sessions_v2";
+      const MAX_SESSIONS = 40;
+      let mode = "law";
+      let isSending = false;
+      /** Điều khiển hủy fetch + stream (nút dừng giống GPT/Gemini). */
+      let activeAbortController = null;
+      let cosTimeoutId = null;
+      /** Phân biệt AbortError: người dùng bấm dừng vs hết 180s (CoSIng). */
+      let abortReason = null;
+      let sessions = [];
+      let currentId = "";
+
+      const appEl = document.querySelector(".app");
+      const chatScroll = document.getElementById("chatScroll");
+      const messagesEl = document.getElementById("messages");
+      const emptyState = document.getElementById("emptyState");
+      const inputEl = document.getElementById("input");
+      const sendBtn = document.getElementById("sendBtn");
+      const errorEl = document.getElementById("error");
+      const modeLawBtn = document.getElementById("modeLaw");
+      const modeCosingBtn = document.getElementById("modeCosing");
+      const inputWrap = document.getElementById("inputWrap");
+      const modeBadge = document.getElementById("modeBadge");
+      const subNote = document.getElementById("subNote");
+      const historyBox = document.getElementById("historyBox");
+      const historySearch = document.getElementById("historySearch");
+      const collapseSidebarBtn = document.getElementById("collapseSidebarBtn");
+      const scrollBottomBtn = document.getElementById("scrollBottomBtn");
+      let historyQuery = "";
+
+      function uid() { return "s-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
+      function nowIso() { return new Date().toISOString(); }
+      function fmtTime(iso) { try { return new Date(iso).toLocaleString("vi-VN"); } catch (e) { return iso || ""; } }
+      function titleFromText(text) { const t = (text || "").trim(); return !t ? "Đoạn chat mới" : (t.length > 40 ? t.slice(0, 40) + "..." : t); }
+      function loadSessions() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) { return []; }
+      }
+      function saveSessions() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.slice(0, MAX_SESSIONS))); } catch (e) {} }
+      function saveSidebarCollapsed(v) { try { localStorage.setItem("chat_demo_sidebar_collapsed", v ? "1" : "0"); } catch (e) {} }
+      function loadSidebarCollapsed() { try { return localStorage.getItem("chat_demo_sidebar_collapsed") === "1"; } catch (e) { return false; } }
+      function getCurrentSession() { return sessions.find(function (s) { return s.id === currentId; }) || null; }
+      function refreshSendState() {
+        const hasText = ((inputEl.value || "").trim().length > 0);
+        if (isSending) {
+          sendBtn.disabled = false;
+          sendBtn.textContent = "\u25A0";
+          sendBtn.title = "Dừng (chỉnh sửa hoặc bổ sung câu hỏi rồi gửi lại)";
+          sendBtn.classList.add("send-stop");
+          sendBtn.setAttribute("aria-label", "Dừng tạo câu trả lời");
+          return;
+        }
+        sendBtn.classList.remove("send-stop");
+        sendBtn.textContent = "\u27A4";
+        sendBtn.title = "Gửi";
+        sendBtn.setAttribute("aria-label", "Gửi");
+        sendBtn.disabled = !hasText;
+      }
+      function createSession() {
+        const s = { id: uid(), title: "Đoạn chat mới", created_at: nowIso(), updated_at: nowIso(), messages: [] };
+        sessions.unshift(s);
+        currentId = s.id;
+        saveSessions();
+        render();
+      }
+      function setMode(m) {
+        mode = m === "cosing" ? "cosing" : "law";
+        modeLawBtn.classList.toggle("active", mode === "law");
+        modeCosingBtn.classList.toggle("active", mode === "cosing");
+        inputWrap.classList.toggle("mode-cos", mode === "cosing");
+        modeBadge.textContent = "Chế độ: " + (mode === "law" ? "Pháp luật" : "CoSIng");
+        subNote.textContent = mode === "law"
+          ? "Mẹo: Enter để gửi, Shift+Enter để xuống dòng. Khi đang chờ, nút gửi chuyển thành ô vuông — bấm để dừng nếu câu hỏi sai hoặc muốn bổ sung."
+          : "Máy chủ tra cứu nền trên CoSIng (thường không mở cửa sổ trình duyệt). Có thể mất 30–120 giây. Trong lúc chờ, bấm ô vuông trên nút gửi để dừng.";
+      }
+      function pushMessage(role, content, extra) {
+        const s = getCurrentSession();
+        if (!s) return "";
+        const msg = { id: uid(), role: role, content: content || "", mode: mode, time: nowIso(), extra: extra || {} };
+        s.messages.push(msg);
+        s.updated_at = nowIso();
+        if (role === "user" && s.title === "Đoạn chat mới") s.title = titleFromText(content);
+        saveSessions();
+        renderMessages();
+        renderHistory();
+        return msg.id;
+      }
+      function updateAssistantMessage(id, content, extra) {
+        const s = getCurrentSession();
+        if (!s) return;
+        const m = s.messages.find(function (x) { return x.id === id; });
+        if (!m) return;
+        m.content = content;
+        if (extra) m.extra = extra;
+        s.updated_at = nowIso();
+        saveSessions();
+        renderMessages();
+      }
+      /** Chỉ đổi khi thật sự chuyển giai đoạn (không quay vòng theo timer). */
+      function setAssistantLoadingPhase(loadingId, statusText) {
+        updateAssistantMessage(loadingId, statusText, { loading: true });
+      }
+      function streamAssistantText(msgId, fullText, extra, signal) {
+        const text = String(fullText || "");
+        const words = text.split(/(\s+)/);
+        let i = 0;
+        const baseExtra = Object.assign({}, extra || {});
+
+        return new Promise(function (resolve) {
+          let timer = null;
+          let done = false;
+          function cleanup() {
+            if (timer) clearInterval(timer);
+            timer = null;
+            if (signal) signal.removeEventListener("abort", onAbort);
+          }
+          function onAbort() {
+            if (done) return;
+            done = true;
+            cleanup();
+            const partial = words.slice(0, i).join("").trim();
+            const tail = "\n\n— Đã dừng. Bạn có thể chỉnh sửa hoặc bổ sung câu hỏi rồi gửi lại.";
+            updateAssistantMessage(
+              msgId,
+              partial ? partial + tail : "Đã dừng. Bạn có thể chỉnh sửa hoặc bổ sung câu hỏi rồi gửi lại.",
+              Object.assign({}, baseExtra, { loading: false })
+            );
+            resolve();
+          }
+          if (signal) signal.addEventListener("abort", onAbort);
+          timer = setInterval(function () {
+            if (done) return;
+            if (signal && signal.aborted) return;
+            i += 3;
+            if (i >= words.length) {
+              done = true;
+              cleanup();
+              updateAssistantMessage(msgId, text, baseExtra);
+              resolve();
+              return;
+            }
+            updateAssistantMessage(msgId, words.slice(0, i).join(""), Object.assign({}, baseExtra, { loading: false }));
+            chatScroll.scrollTop = chatScroll.scrollHeight;
+          }, 28);
+        });
+      }
+      function renderHistory() {
+        historyBox.innerHTML = "";
+        const now = new Date();
+        const todayKey = now.toDateString();
+        const yesterdayKey = new Date(now.getTime() - 86400000).toDateString();
+        const groups = { "Hôm nay": [], "Hôm qua": [], "7 ngày trước": [], "Tháng trước": [] };
+        sessions.forEach(function (s) {
+          if (historyQuery) {
+            const q = historyQuery.toLowerCase();
+            const src = ((s.title || "") + " " + (s.messages && s.messages[0] ? s.messages[0].content || "" : "")).toLowerCase();
+            if (!src.includes(q)) return;
+          }
+          const key = new Date(s.updated_at).toDateString();
+          if (key === todayKey) groups["Hôm nay"].push(s);
+          else if (key === yesterdayKey) groups["Hôm qua"].push(s);
+          else if ((now.getTime() - new Date(s.updated_at).getTime()) <= 7 * 86400000) groups["7 ngày trước"].push(s);
+          else groups["Tháng trước"].push(s);
+        });
+        Object.keys(groups).forEach(function (g) {
+          if (!groups[g].length) return;
+          const h = document.createElement("div");
+          h.className = "session-meta";
+          h.style.margin = "0.55rem 0 0.35rem";
+          h.style.fontWeight = "700";
+          h.textContent = g;
+          historyBox.appendChild(h);
+          groups[g].forEach(function (s) {
+            const item = document.createElement("div");
+            item.className = "session-item" + (s.id === currentId ? " active" : "");
+            item.innerHTML = '<button class="session-rename" title="Đổi tên">✎</button><button class="session-delete" title="Xóa đoạn chat">✕</button><div class="session-title"></div><div class="session-meta"></div>';
+            item.querySelector(".session-title").textContent = s.title || "Đoạn chat";
+            item.querySelector(".session-meta").textContent = fmtTime(s.updated_at);
+            item.addEventListener("click", function () { currentId = s.id; render(); });
+            item.querySelector(".session-rename").addEventListener("click", function (ev) {
+              ev.stopPropagation();
+              const v = window.prompt("Đổi tên đoạn chat:", s.title || "");
+              if (v === null) return;
+              const name = String(v).trim();
+              if (!name) return;
+              s.title = name.slice(0, 60);
+              s.updated_at = nowIso();
+              saveSessions();
+              renderHistory();
+            });
+            item.querySelector(".session-delete").addEventListener("click", function (ev) {
+              ev.stopPropagation();
+              sessions = sessions.filter(function (x) { return x.id !== s.id; });
+              if (!sessions.length) {
+                createSession();
+                return;
+              }
+              if (currentId === s.id) currentId = sessions[0].id;
+              saveSessions();
+              render();
+            });
+            historyBox.appendChild(item);
+          });
+        });
+      }
+      function citationText(citations) {
+        if (!Array.isArray(citations) || !citations.length) return "";
+        let refs = "";
+        for (let i = 0; i < citations.length; i += 1) refs += " [" + (i + 1) + "]";
+        return refs;
+      }
+      function renderMessages() {
+        const s = getCurrentSession();
+        messagesEl.innerHTML = "";
+        if (!s || !s.messages.length) {
+          emptyState.classList.remove("hidden");
+          chatScroll.scrollTop = 0;
+          return;
+        }
+        emptyState.classList.add("hidden");
+        s.messages.forEach(function (m, idx) {
+          const row = document.createElement("div");
+          row.className = "row " + (m.role === "user" ? "user" : "assistant");
+          const rowInner = document.createElement("div");
+          rowInner.className = "row-inner";
+          const avatar = document.createElement("span");
+          avatar.className = "avatar " + (m.role === "user" ? "user" : "bot");
+          avatar.textContent = m.role === "user" ? "B" : "AI";
+          const bubble = document.createElement("div");
+          const loadingEmpty = m.extra && m.extra.loading && !String(m.content || "").trim();
+          bubble.className = "bubble" + (loadingEmpty ? " skeleton" : "");
+          if (m.role === "user") {
+            const content = document.createElement("div");
+            content.textContent = m.content || "";
+            const t = document.createElement("div");
+            t.className = "bubble-time";
+            t.textContent = fmtTime(m.time);
+            bubble.appendChild(content);
+            bubble.appendChild(t);
+          } else {
+            bubble.textContent = m.content || "";
+          }
+          rowInner.appendChild(avatar);
+          rowInner.appendChild(bubble);
+          row.appendChild(rowInner);
+
+          const wrap = document.createElement("div");
+          wrap.appendChild(row);
+          if (m.role !== "user") {
+            const meta = document.createElement("div");
+            meta.className = "msg-meta";
+            meta.textContent = "Trợ lý · " + fmtTime(m.time);
+            wrap.appendChild(meta);
+          }
+
+          if (m.role === "assistant" && !(m.extra && m.extra.loading)) {
+            if (m.extra && Array.isArray(m.extra.citations) && m.extra.citations.length) {
+              const ref = document.createElement("div");
+              ref.className = "msg-meta";
+              ref.textContent = "Nguồn tham khảo:" + citationText(m.extra.citations);
+              ref.title = m.extra.citations.join(" | ");
+              wrap.appendChild(ref);
+            }
+            const hasCosingLinks = m.extra && Array.isArray(m.extra.cosing_links) && m.extra.cosing_links.length;
+            if (hasCosingLinks) {
+              const block = document.createElement("div");
+              block.className = "cosing-ref-block";
+              const title = document.createElement("div");
+              title.className = "cosing-ref-title";
+              title.textContent = "Mở trang CoSIng (EU) — xem bảng & chi tiết substance";
+              block.appendChild(title);
+              if (m.extra && Array.isArray(m.extra.citation_details) && m.extra.citation_details.length) {
+                const sum = document.createElement("div");
+                sum.className = "cosing-ref-summary";
+                m.extra.citation_details.slice(0, 5).forEach(function (d, ix) {
+                  const chip = document.createElement("span");
+                  chip.className = "ref-chip ref-chip-lg";
+                  chip.textContent = "[" + (ix + 1) + "] " + d;
+                  sum.appendChild(chip);
+                });
+                block.appendChild(sum);
+              }
+              const linkRow = document.createElement("div");
+              linkRow.className = "cosing-ref-links";
+              m.extra.cosing_links.forEach(function (L) {
+                const a = document.createElement("a");
+                a.className = "cosing-link-btn";
+                a.href = L.url;
+                a.title = L.url;
+                a.target = "_blank";
+                a.rel = "noopener noreferrer";
+                a.textContent = L.label || "CoSIng";
+                linkRow.appendChild(a);
+              });
+              block.appendChild(linkRow);
+              wrap.appendChild(block);
+            } else if (m.extra && Array.isArray(m.extra.citation_details) && m.extra.citation_details.length) {
+              const refs = document.createElement("div");
+              refs.className = "refs";
+              m.extra.citation_details.slice(0, 5).forEach(function (d, ix) {
+                const chip = document.createElement("span");
+                chip.className = "ref-chip";
+                chip.textContent = "[" + (ix + 1) + "] " + d;
+                refs.appendChild(chip);
+              });
+              wrap.appendChild(refs);
+            }
+            const actions = document.createElement("div");
+            actions.className = "actions";
+            const copy = document.createElement("button");
+            copy.textContent = "Sao chép";
+            copy.addEventListener("click", function () { navigator.clipboard.writeText(m.content || "").catch(function () {}); });
+            const regen = document.createElement("button");
+            regen.textContent = "Thử lại";
+            regen.addEventListener("click", function () {
+              const lastUser = s.messages.slice(0, idx).reverse().find(function (x) { return x.role === "user"; });
+              if (lastUser) {
+                inputEl.value = lastUser.content || "";
+                autoExpand();
+                send();
+              }
+            });
+            actions.appendChild(copy);
+            actions.appendChild(regen);
+            wrap.appendChild(actions);
+          }
+          messagesEl.appendChild(wrap);
+        });
+        chatScroll.scrollTop = chatScroll.scrollHeight;
+      }
+      function render() { if (!getCurrentSession()) createSession(); renderHistory(); renderMessages(); }
+      function showError(msg) { errorEl.textContent = msg || ""; errorEl.classList.toggle("hidden", !msg); }
+      function autoExpand() {
+        inputEl.style.height = "auto";
+        inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + "px";
+      }
+      async function callLaw(question, signal) {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: question, top_k: 3 }),
+          signal: signal
+        });
+        const data = await res.json().catch(function () { return null; });
+        if (!res.ok) throw new Error((data && data.detail) || "Không thể tra cứu pháp luật.");
+        const details = (data.sources || []).map(function (s) {
+          return (s.law_number || "—") + " · " + (s.article_ref || "—");
+        });
+        return {
+          text: data.answer || "(Không có nội dung)",
+          citations: data.citations || [],
+          citation_details: details
+        };
+      }
+      async function callCosing(query, signal) {
+        const res = await fetch("/api/cosing/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query, query_type: "NAME_OR_INCI" }),
+          signal: signal
+        });
+        const data = await res.json().catch(function () { return null; });
+        if (!res.ok) throw new Error((data && data.detail) || "Không thể tra cứu CoSIng.");
+        const subs = (data && data.substances) || [];
+        if (!subs.length) {
+          return { text: "Không có bản ghi phù hợp. Bạn có thể thử cách viết khác.", citations: [], citation_details: [], cosing_links: [] };
+        }
+        const first = subs[0];
+        let txt =
+          "【Liên kết CoSIng (EU) — khối nút lớn màu tím ngay dưới đoạn tóm tắt】\n\n" +
+          "Mình đã tìm thấy " +
+          subs.length +
+          " kết quả.\n";
+        txt += "- Tên: " + (first.substance_name || first.inci_name || "Không rõ") + "\n";
+        if (first.inci_name) txt += "- INCI: " + first.inci_name + "\n";
+        if (first.cas) txt += "- CAS: " + first.cas + "\n";
+        if (first.ec) txt += "- EC: " + first.ec + "\n";
+        if (first.function) txt += "- Chức năng (bảng): " + first.function + "\n";
+        if (first.restrictions) txt += "- Hạn chế (bảng): " + String(first.restrictions).slice(0, 240) + (String(first.restrictions).length > 240 ? "..." : "") + "\n";
+        function appendIf(label, val, maxLen) {
+          if (!val) return;
+          var t = String(val).trim();
+          if (!t) return;
+          if (maxLen && t.length > maxLen) t = t.slice(0, maxLen) + "...";
+          txt += "- " + label + ": " + t + "\n";
+        }
+        appendIf("Annex/Ref (chi tiết)", first.annex_ref, 120);
+        appendIf("Quy định (Regulation)", first.regulation, 200);
+        appendIf("Chức năng (CoSIng, đầy đủ)", first.functions_detail, 400);
+        appendIf("Nồng độ tối đa", first.max_concentration, 200);
+        appendIf("Glossary (tên thông dụng)", first.glossary_name, 200);
+        appendIf("Mô tả", first.description, 500);
+        appendIf("Ý kiến SCCS", first.sccs_opinions, 500);
+        txt +=
+          "\n\n— Cuộn xuống: khối “Mở trang CoSIng (EU)” với các nút lớn — bấm để xem đầy đủ; " +
+          "đặt chuột lên nút để xem URL đầy đủ.";
+        const cosingLinks = [];
+        function pushCosingLink(label, url) {
+          if (!url || typeof url !== "string") return;
+          var u = url.trim();
+          if (!u) return;
+          if (cosingLinks.some(function (x) { return x.url === u; })) return;
+          cosingLinks.push({ label: label, url: u });
+        }
+        pushCosingLink("Bảng kết quả (EU)", first.reference_url);
+        pushCosingLink("Trang ingredient", first.ingredient_detail_url);
+        pushCosingLink("Trang substance (chi tiết)", first.related_substance_detail_url);
+        const details = subs.slice(0, 5).map(function (s) {
+          return (s.substance_name || s.inci_name || "Không rõ") + (s.cas ? " · CAS " + s.cas : "");
+        });
+        return {
+          text: txt,
+          citations: [],
+          citation_details: details,
+          cosing_links: cosingLinks
+        };
+      }
+      async function send() {
+        if (isSending) return;
+        const question = (inputEl.value || "").trim();
+        if (!question) return;
+        if (!getCurrentSession()) createSession();
+
+        showError("");
+        abortReason = null;
+        isSending = true;
+        activeAbortController = new AbortController();
+        const ctrl = activeAbortController;
+        refreshSendState();
+        pushMessage("user", question, {});
+        inputEl.value = "";
+        autoExpand();
+        refreshSendState();
+        const loadingId = pushMessage("assistant", "", { loading: true });
+        setAssistantLoadingPhase(loadingId, "Đang gửi yêu cầu...");
+
+        try {
+          let out;
+          if (mode === "law") {
+            setAssistantLoadingPhase(
+              loadingId,
+              "Đang tra cứu kho văn bản và chờ máy chủ phản hồi..."
+            );
+            out = await callLaw(question, ctrl.signal);
+            setAssistantLoadingPhase(loadingId, "Đang hiển thị câu trả lời...");
+          } else {
+            cosTimeoutId = setTimeout(function () {
+              abortReason = "timeout";
+              ctrl.abort();
+            }, 180000);
+            setAssistantLoadingPhase(
+              loadingId,
+              "Đang truy vấn CoSIng — bước này có thể mất vài chục giây, vui lòng đợi..."
+            );
+            out = await callCosing(question, ctrl.signal);
+            if (cosTimeoutId) {
+              clearTimeout(cosTimeoutId);
+              cosTimeoutId = null;
+            }
+            setAssistantLoadingPhase(loadingId, "Đang hiển thị kết quả...");
+          }
+          await streamAssistantText(
+            loadingId,
+            out.text,
+            {
+              loading: false,
+              citations: out.citations || [],
+              citation_details: out.citation_details || [],
+              cosing_links: out.cosing_links || []
+            },
+            ctrl.signal
+          );
+        } catch (e) {
+          if (e && e.name === "AbortError") {
+            const timedOut = abortReason === "timeout";
+            updateAssistantMessage(
+              loadingId,
+              timedOut && mode === "cosing"
+                ? "Hết thời gian chờ (180 giây). Bạn có thể thử lại hoặc thu hẹp câu hỏi."
+                : "Đã dừng. Bạn có thể chỉnh sửa hoặc bổ sung câu hỏi rồi gửi lại.",
+              { loading: false, citations: [], citation_details: [] }
+            );
+            showError(timedOut && mode === "cosing" ? "Hết thời gian chờ CoSIng (180 giây)." : "");
+          } else {
+            updateAssistantMessage(loadingId, "Mình chưa thể xử lý yêu cầu này lúc này. Bạn vui lòng thử lại sau.", { loading: false, citations: [], citation_details: [] });
+            showError(e.message || "Có lỗi xảy ra.");
+          }
+        } finally {
+          if (cosTimeoutId) {
+            clearTimeout(cosTimeoutId);
+            cosTimeoutId = null;
+          }
+          activeAbortController = null;
+          abortReason = null;
+          isSending = false;
+          refreshSendState();
+        }
+      }
+
+      function stopOutgoing() {
+        if (!isSending || !activeAbortController) return;
+        abortReason = "user";
+        activeAbortController.abort();
+      }
+
+      document.getElementById("newChatBtn").addEventListener("click", function () { createSession(); });
+      modeLawBtn.addEventListener("click", function () { setMode("law"); });
+      modeCosingBtn.addEventListener("click", function () { setMode("cosing"); });
+      sendBtn.addEventListener("click", function () {
+        if (isSending) {
+          stopOutgoing();
+          return;
+        }
+        send();
+      });
+      inputEl.addEventListener("input", function () {
+        autoExpand();
+        refreshSendState();
+      });
+      inputEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          send();
+        }
+      });
+      document.querySelectorAll(".suggest-card").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          const m = btn.getAttribute("data-mode") || "law";
+          const q = btn.getAttribute("data-q") || "";
+          setMode(m === "cosing" ? "cosing" : "law");
+          inputEl.value = q;
+          autoExpand();
+          refreshSendState();
+          inputEl.focus();
+        });
+      });
+      historySearch.addEventListener("input", function () {
+        historyQuery = (historySearch.value || "").trim();
+        renderHistory();
+      });
+      collapseSidebarBtn.addEventListener("click", function () {
+        const collapsed = appEl.classList.toggle("sidebar-collapsed");
+        saveSidebarCollapsed(collapsed);
+      });
+      chatScroll.addEventListener("scroll", function () {
+        const nearBottom = (chatScroll.scrollHeight - chatScroll.scrollTop - chatScroll.clientHeight) < 120;
+        scrollBottomBtn.classList.toggle("visible", !nearBottom);
+      });
+      scrollBottomBtn.addEventListener("click", function () {
+        chatScroll.scrollTop = chatScroll.scrollHeight;
+      });
+
+      sessions = loadSessions();
+      if (!sessions.length) createSession();
+      else {
+        currentId = sessions[0].id;
+        render();
+      }
+      setMode("law");
+      autoExpand();
+      refreshSendState();
+      if (loadSidebarCollapsed()) appEl.classList.add("sidebar-collapsed");
+    })();
+  </script>
+</body>
+</html>

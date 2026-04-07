@@ -4,7 +4,7 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, List, Optional
 from urllib.parse import urljoin
 
 from selenium import webdriver  # type: ignore
@@ -17,7 +17,7 @@ from webdriver_manager.chrome import ChromeDriverManager  # type: ignore
 from webdriver_manager.microsoft import EdgeChromiumDriverManager  # type: ignore
 
 from .parser import parse_cosing_detail_page, parse_cosing_results_table
-from .schemas import ChemicalLookupOutput, QueryType, vietnam_now_iso
+from .schemas import ChemicalLookupOutput, QueryType, Substance, vietnam_now_iso
 
 
 COSING_URL = "https://ec.europa.eu/growth/tools-databases/cosing/advanced"
@@ -34,6 +34,8 @@ class WorkerConfig:
     artifacts_dir: Path = Path("data/artifacts/cosing")
     circuit_breaker_trip_failures: int = 3
     circuit_breaker_cooldown_seconds: int = 300
+    # Sau bảng kết quả: mở trang chi tiết + (nếu có) link Identified INGREDIENTS để lấy mô tả, SCCS, nồng độ tối đa…
+    enrich_detail: bool = True
 
 
 class CosingSeleniumWorker:
@@ -56,6 +58,14 @@ class CosingSeleniumWorker:
             options.add_argument("--disable-gpu")
             options.add_argument("--no-sandbox")
             driver = webdriver.Edge(service=service, options=options)
+            if not headless:
+                try:
+                    driver.maximize_window()
+                except Exception:
+                    try:
+                        driver.set_window_size(1280, 900)
+                    except Exception:
+                        pass
             return driver
 
         # default: chrome
@@ -66,6 +76,14 @@ class CosingSeleniumWorker:
         options.add_argument("--disable-gpu")
         options.add_argument("--no-sandbox")
         driver = webdriver.Chrome(service=service, options=options)
+        if not headless:
+            try:
+                driver.maximize_window()
+            except Exception:
+                try:
+                    driver.set_window_size(1280, 900)
+                except Exception:
+                    pass
         return driver
 
     def _wait_for_input(self, driver: webdriver.Remote) -> Any:
@@ -100,6 +118,140 @@ class CosingSeleniumWorker:
                 return c
 
         raise TimeoutException("Khong tim thay input substance tren trang CoSIng.")
+
+    def _apply_detail_urls_from_dom(self, driver: webdriver.Remote, substances: List[Substance]) -> None:
+        """
+        Gán reference_url từ <a href> thật trên từng dòng. Selenium trả về URL tuyệt đối;
+        outerHTML đưa vào BeautifulSoup đôi khi thiếu/khác href nên parser chỉ bắt được /advanced.
+        """
+        if not substances:
+            return
+        try:
+            table = driver.find_element(By.CSS_SELECTOR, "table")
+            rows = table.find_elements(By.CSS_SELECTOR, "tbody tr")
+            if not rows:
+                all_tr = table.find_elements(By.CSS_SELECTOR, "tr")
+                rows = [r for r in all_tr if r.find_elements(By.CSS_SELECTOR, "td")]
+            for i, row in enumerate(rows):
+                if i >= len(substances):
+                    break
+                best = ""
+                for a in row.find_elements(By.CSS_SELECTOR, "a"):
+                    raw = (a.get_attribute("href") or "").strip()
+                    if not raw:
+                        continue
+                    low = raw.lower()
+                    if "cosing/details" in low or (
+                        "/growth/tools-databases/cosing/" in low and "/details/" in low
+                    ):
+                        best = raw
+                        break
+                if best:
+                    substances[i].reference_url = best
+        except Exception as e:
+            self.logger.debug("apply_detail_urls_from_dom failed: %s", e)
+
+    def _enrich_first_substance_from_detail(
+        self,
+        driver: webdriver.Remote,
+        substances: List[Substance],
+        query: str,
+        request_id: str,
+    ) -> None:
+        """
+        Mở trang chi tiết của kết quả đầu tiên (giống walkthrough video):
+        ingredient detail -> (nếu có) link Identified INGREDIENTS -> substance detail
+        để lấy mô tả, Annex, functions đầy đủ, SCCS, nồng độ tối đa, glossary.
+        """
+        if not substances:
+            return
+        s0 = substances[0]
+        try:
+            url = (s0.reference_url or "").strip()
+            if "cosing/details" in url.lower():
+                driver.get(url)
+                time.sleep(0.8)
+            else:
+                self._click_first_result(driver, query)
+
+            try:
+                self._wait_for_detail_page(driver)
+            except Exception:
+                try:
+                    self._wait_for_casing_detail_loaded(driver)
+                except Exception:
+                    self.logger.debug("detail page markers not found after open first result")
+
+            ingredient_url = driver.current_url
+            ingredient_detail = parse_cosing_detail_page(
+                driver.page_source,
+                reference_url=ingredient_url,
+            )
+
+            try:
+                WebDriverWait(driver, 15).until(
+                    EC.presence_of_element_located(
+                        (
+                            By.XPATH,
+                            "//td[contains(normalize-space(),'Identified INGREDIENTS')]/following-sibling::td//a[contains(@href,'/growth/tools-databases/cosing/details/')]",
+                        )
+                    )
+                )
+            except Exception:
+                pass
+
+            clicked = self._click_first_identified_ingredient_link(driver)
+            substance_url = ""
+            if clicked:
+                try:
+                    self._wait_for_casing_detail_loaded(driver)
+                except Exception:
+                    pass
+                try:
+                    label_el = driver.find_element(
+                        By.XPATH,
+                        "//td[contains(normalize-space(),'SCCS opinions')]",
+                    )
+                    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", label_el)
+                    time.sleep(1.0)
+                except Exception:
+                    time.sleep(0.5)
+                substance_url = driver.current_url
+                detail = parse_cosing_detail_page(driver.page_source, reference_url=substance_url)
+                if ingredient_detail:
+                    if not detail.get("inci_name"):
+                        detail["inci_name"] = ingredient_detail.get("inci_name", "")
+                    if not detail.get("functions"):
+                        detail["functions"] = ingredient_detail.get("functions", "")
+                    if not detail.get("description"):
+                        detail["description"] = ingredient_detail.get("description", "")
+            else:
+                detail = ingredient_detail
+
+            s0.description = detail.get("description", "")
+            s0.regulation = detail.get("regulation", "")
+            s0.annex_ref = detail.get("annex_ref", "")
+            s0.functions_detail = detail.get("functions", "")
+            s0.sccs_opinions = detail.get("sccs_opinions", "")
+            s0.max_concentration = detail.get("max_concentration", "")
+            s0.glossary_name = detail.get("glossary_name", "")
+            s0.ingredient_detail_url = ingredient_url
+            s0.related_substance_detail_url = substance_url if clicked else ""
+
+            if not s0.cas and detail.get("cas"):
+                s0.cas = detail["cas"]
+            if not s0.ec and detail.get("ec"):
+                s0.ec = detail["ec"]
+        except Exception as e:
+            self.logger.warning(
+                "enrich_first_substance_from_detail failed request_id=%s err=%s",
+                request_id,
+                e,
+            )
+            try:
+                self._snapshot_artifacts(request_id, driver, suffix="enrich_fail")
+            except Exception:
+                pass
 
     def _wait_for_results(self, driver: webdriver.Remote) -> Any:
         wait = WebDriverWait(driver, self.config.timeout_seconds)
@@ -361,6 +513,10 @@ class CosingSeleniumWorker:
                         table_html,
                         reference_url=self.config.cosing_url,
                     )
+                    self._apply_detail_urls_from_dom(driver, substances)
+
+                    if self.config.enrich_detail and substances:
+                        self._enrich_first_substance_from_detail(driver, substances, query, request_id)
 
                     # If we got a results table but parsed 0 substances, assume DOM changed or parse heuristic failed.
                     if not substances:
@@ -391,10 +547,11 @@ class CosingSeleniumWorker:
                         raise
 
                 output = ChemicalLookupOutput(request_id=request_id, substances=substances, status="OK")
-                # Fill fetched_at + reference_url per substance
                 fetched_at = vietnam_now_iso()
                 for s in output.substances:
-                    s.reference_url = self.config.cosing_url
+                    # Parser may set per-row detail URLs; only fill fallback if missing.
+                    if not (s.reference_url and str(s.reference_url).strip()):
+                        s.reference_url = self.config.cosing_url
                     s.fetched_at = fetched_at
                 self._consecutive_failures = 0
                 return output

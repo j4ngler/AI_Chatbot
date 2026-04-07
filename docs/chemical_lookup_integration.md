@@ -66,7 +66,10 @@ Khi Selenium/parse gặp lỗi hoặc DOM thay đổi:
 - Ví dụ file: `attempt1_fail_<timestamp>.png|.html`
 
 ## 6) Cách tích hợp vào chatbot
-Khi chatbot nhận biết query thuộc nhóm “tra cứu hóa chất”, gọi service theo contract:
+
+**HTTP (demo):** `POST /api/cosing/lookup` với body JSON giống input contract; cần `COSING_ENABLED=true` trong `.env`. Giao diện `demo_web` có tab CoSIng gọi endpoint này.
+
+Khi chatbot nhận biết query thuộc nhóm “tra cứu hóa chất”, có thể gọi service trực tiếp theo contract:
 
 ```python
 from pathlib import Path

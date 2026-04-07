@@ -7,8 +7,13 @@ fastapi
 uvicorn[standard]
 pydantic
 python-dotenv
-openai
 pypdf
 numpy
+scikit-learn
+joblib
 requests
-google-generativeai
+striprtf
+sentence-transformers
+torch
+pytest
+httpx

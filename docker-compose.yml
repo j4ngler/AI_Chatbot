@@ -1,0 +1,17 @@
+# Demo: docker compose up --build
+# Giao diện: http://localhost:8000/  |  API: POST http://localhost:8000/chat
+# Sao chép .env.example thành .env; LLM qua Ollama (OLLAMA_BASE_URL, ví dụ host.docker.internal).
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Ghi đè khi cần (ví dụ Ollama chạy trên máy host: host.docker.internal)
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+    # volumes:
+    #   - ./data/vector_db/file_based_demo:/app/data/vector_db/file_based_demo
+    restart: unless-stopped

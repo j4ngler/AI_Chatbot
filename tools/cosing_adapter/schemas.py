@@ -25,10 +25,21 @@ class Substance:
     substance_name: str = ""
     inci_name: str = ""
     cas: str = ""
+    ec: str = ""
     function: str = ""
     restrictions: str = ""
     reference_url: str = ""
     fetched_at: str = ""
+    # Trang chi tiết (sau khi enrich — xem COSING_ENRICH_DETAIL)
+    description: str = ""
+    regulation: str = ""
+    annex_ref: str = ""
+    functions_detail: str = ""
+    sccs_opinions: str = ""
+    max_concentration: str = ""
+    glossary_name: str = ""
+    ingredient_detail_url: str = ""
+    related_substance_detail_url: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from .cache_store import ChemicalCacheStore
@@ -43,10 +44,13 @@ def main() -> int:
     validated = validate_input_contract(input_payload)
 
     cache_store = ChemicalCacheStore(cache_dir=Path(args.cache_dir), ttl_hours=24)
+    enrich_raw = (os.getenv("COSING_ENRICH_DETAIL", "true") or "").strip().lower()
+    enrich_detail = enrich_raw in ("1", "true", "yes", "on")
     worker = CosingSeleniumWorker(
         WorkerConfig(
             headless=headless,
             browser=args.browser,
+            enrich_detail=enrich_detail,
         )
     )
     service = ChemicalLookupService(cache_store=cache_store, worker=worker)
