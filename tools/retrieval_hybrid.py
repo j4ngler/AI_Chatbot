@@ -11,6 +11,28 @@ from typing import Any
 import numpy as np
 
 
+def row_indices_for_business_groups(metas: list[dict], group_filter: list[str] | None) -> np.ndarray | None:
+    """
+    None = không lọc (toàn bộ chỉ mục).
+    np.ndarray int64: chỉ các dòng thuộc nhóm; rỗng nghĩa là không có chunk nào khớp.
+    Chunk không có business_group (legacy) vẫn được giữ khi đang lọc — tránh gãy kho cũ chưa rebuild.
+    """
+    if not group_filter:
+        return None
+    allowed = {str(g).strip() for g in group_filter if str(g).strip()}
+    if not allowed:
+        return None
+    idx_list: list[int] = []
+    for i, m in enumerate(metas):
+        raw = m.get("business_group")
+        g = str(raw).strip() if raw is not None and raw != "" else ""
+        if not g:
+            idx_list.append(i)
+        elif g in allowed:
+            idx_list.append(i)
+    return np.array(idx_list, dtype=np.int64)
+
+
 def _minmax01(x: np.ndarray) -> np.ndarray:
     mn = float(x.min())
     mx = float(x.max())
@@ -31,6 +53,7 @@ def hybrid_retrieve(
     top_k: int,
     alpha: float,
     min_score: float | None,
+    group_filter: list[str] | None = None,
 ) -> tuple[list[dict], np.ndarray, bool, float]:
     """
     Returns: (retrieved_metas, scores_for_retrieved, low_confidence, best_score)
@@ -39,13 +62,23 @@ def hybrid_retrieve(
     if len(metas) != n:
         raise RuntimeError("metas length != tfidf rows")
 
+    allowed_idx = row_indices_for_business_groups(metas, group_filter)
+    if allowed_idx is not None and allowed_idx.size == 0:
+        return [], np.array([], dtype=np.float64), True, 0.0
+
     retrieve_k = max(1, min(retrieve_k, n))
     top_k = max(1, min(top_k, retrieve_k))
 
     q_tfidf = vectorizer.transform([question])
-    tfidf_sims = (tfidf_matrix @ q_tfidf.T).toarray().ravel()
+    tfidf_sims = sparse_or_dense_dot_tfidf_query(tfidf_matrix, q_tfidf)
 
-    pool_idx = np.argsort(-tfidf_sims)[:retrieve_k]
+    if allowed_idx is not None:
+        sims_allowed = tfidf_sims[allowed_idx]
+        order_local = np.argsort(-sims_allowed)
+        take = min(retrieve_k, int(order_local.size))
+        pool_idx = allowed_idx[order_local[:take]]
+    else:
+        pool_idx = np.argsort(-tfidf_sims)[:retrieve_k]
     pool_t = tfidf_sims[pool_idx].astype(np.float64)
 
     if dense_matrix is not None and encode_query is not None and alpha > 1e-6:
@@ -98,16 +131,27 @@ def tfidf_only_retrieve(
     retrieve_k: int,
     top_k: int,
     min_score: float | None,
+    group_filter: list[str] | None = None,
 ) -> tuple[list[dict], np.ndarray, bool, float]:
     """Pool retrieve_k by TF-IDF, min-max on pool, cut top_k; min_score on best normalized score."""
     n = int(tfidf_matrix.shape[0])
+    allowed_idx = row_indices_for_business_groups(metas, group_filter)
+    if allowed_idx is not None and allowed_idx.size == 0:
+        return [], np.array([], dtype=np.float64), True, 0.0
+
     retrieve_k = max(1, min(retrieve_k, n))
     top_k = max(1, min(top_k, retrieve_k))
 
     q_tfidf = vectorizer.transform([question])
     tfidf_sims = sparse_or_dense_dot_tfidf_query(tfidf_matrix, q_tfidf)
 
-    pool_idx = np.argsort(-tfidf_sims)[:retrieve_k]
+    if allowed_idx is not None:
+        sims_allowed = tfidf_sims[allowed_idx]
+        order_local = np.argsort(-sims_allowed)
+        take = min(retrieve_k, int(order_local.size))
+        pool_idx = allowed_idx[order_local[:take]]
+    else:
+        pool_idx = np.argsort(-tfidf_sims)[:retrieve_k]
     pool_t = tfidf_sims[pool_idx].astype(np.float64)
     hybrid = _minmax01(pool_t)
     order = np.argsort(-hybrid)

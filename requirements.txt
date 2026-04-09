@@ -4,6 +4,7 @@ webdriver-manager
 beautifulsoup4
 lxml
 fastapi
+python-multipart
 uvicorn[standard]
 pydantic
 python-dotenv
@@ -17,3 +18,5 @@ sentence-transformers
 torch
 pytest
 httpx
+pillow
+pytesseract

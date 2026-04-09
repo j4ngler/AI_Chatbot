@@ -61,6 +61,77 @@ def build_context(metas: list[dict], limit_chars_per_chunk: int = 1800) -> tuple
     return "\n\n".join(parts), citations
 
 
+def dedupe_metas_keep_order(metas: list[dict], limit: int) -> list[dict]:
+    seen: set[str] = set()
+    out: list[dict] = []
+    for m in metas:
+        chunk_id = str(m.get("chunk_id", "")).strip()
+        if chunk_id:
+            key = f"id:{chunk_id}"
+        else:
+            key = "|".join(
+                [
+                    str(m.get("law_number", "")),
+                    str(m.get("article_ref", "")),
+                    str(m.get("chunk_text", ""))[:160],
+                ]
+            )
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(m)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def extract_keywords(question: str) -> list[str]:
+    stop = {
+        "là",
+        "và",
+        "hoặc",
+        "của",
+        "cho",
+        "theo",
+        "thế",
+        "nào",
+        "bao",
+        "nhiêu",
+        "được",
+        "không",
+        "khi",
+        "với",
+        "trong",
+        "các",
+        "những",
+    }
+    import re
+
+    tokens = re.findall(r"[0-9A-Za-zÀ-ỹ_]+", question.lower())
+    kws = [t for t in tokens if len(t) >= 3 and t not in stop]
+    uniq: list[str] = []
+    for t in kws:
+        if t not in uniq:
+            uniq.append(t)
+    return uniq[:10]
+
+
+def rerank_metas_by_keyword_overlap(question: str, metas: list[dict]) -> list[dict]:
+    kws = extract_keywords(question)
+    if not kws:
+        return metas
+    scored = []
+    for i, m in enumerate(metas):
+        txt = str(m.get("chunk_text", "")).lower()
+        hits = 0
+        for k in kws:
+            if k in txt:
+                hits += 1
+        scored.append((hits, -i, m))
+    scored.sort(reverse=True)
+    return [m for _, __, m in scored]
+
+
 def main() -> None:
     load_dotenv(PROJECT_ROOT / ".env")
 
@@ -68,6 +139,13 @@ def main() -> None:
     parser.add_argument("--question", required=True)
     parser.add_argument("--top-k", type=int, default=int(os.getenv("TOP_K_DEFAULT", "3")))
     parser.add_argument("--json-meta", action="store_true", help="In thêm low_confidence, best_score")
+    parser.add_argument(
+        "--business-group",
+        action="append",
+        dest="business_groups",
+        metavar="ID",
+        help="Lọc chunk theo metadata business_group (lặp lại để chọn nhiều nhóm).",
+    )
     args = parser.parse_args()
 
     if os.getenv("ROUTER_ENABLED", "true").lower() in ("1", "true", "yes"):
@@ -98,9 +176,20 @@ def main() -> None:
 
             model_name = os.getenv("DENSE_MODEL_NAME", "paraphrase-multilingual-MiniLM-L12-v2")
             st_model = SentenceTransformer(model_name)
-        v = st_model.encode([q], convert_to_numpy=True, normalize_embeddings=True)[0]
+        v = st_model.encode(
+            [q],
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )[0]
         return v.astype(np.float32)
 
+    retrieval_top_k = min(retrieve_k, max(args.top_k + 4, args.top_k * 3, 20))
+    group_filter = None
+    if args.business_groups:
+        group_filter = [str(g).strip() for g in args.business_groups if str(g).strip()]
+        if not group_filter:
+            group_filter = None
     if use_hybrid and dm is not None:
         retrieved_metas, scores, low_conf, best = hybrid_retrieve(
             args.question,
@@ -108,11 +197,12 @@ def main() -> None:
             tfidf_matrix,
             metas,
             dense_matrix=dm,
-            encode_query=encode_q,
+            encode_query=encode_q if alpha > 1e-6 else None,
             retrieve_k=retrieve_k,
-            top_k=args.top_k,
+            top_k=retrieval_top_k,
             alpha=alpha,
             min_score=min_score,
+            group_filter=group_filter,
         )
     else:
         retrieved_metas, scores, low_conf, best = tfidf_only_retrieve(
@@ -121,8 +211,9 @@ def main() -> None:
             tfidf_matrix,
             metas,
             retrieve_k=retrieve_k,
-            top_k=args.top_k,
+            top_k=retrieval_top_k,
             min_score=min_score,
+            group_filter=group_filter,
         )
 
     if low_conf:
@@ -135,6 +226,9 @@ def main() -> None:
         }
         print(json.dumps(out, ensure_ascii=True, indent=2))
         return
+
+    retrieved_metas = rerank_metas_by_keyword_overlap(args.question, retrieved_metas)
+    retrieved_metas = dedupe_metas_keep_order(retrieved_metas, args.top_k)
 
     context, citations = build_context(retrieved_metas)
     ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")

@@ -15,12 +15,19 @@ def route_smalltalk(question: str) -> str | None:
         "hello",
         "hi",
         "hey",
+        "ok",
+        "oke",
+        "bye",
+        "tạm biệt",
+        "tam biet",
         "cảm ơn",
         "cam on",
         "thanks",
         "thank you",
     }
     if q in exact:
+        if q in {"bye", "tạm biệt", "tam biet"}:
+            return _BYE_REPLY
         return _GREETING_REPLY
 
     prefixes = (
@@ -30,10 +37,14 @@ def route_smalltalk(question: str) -> str | None:
         "hello ",
         "hi ",
         "hey ",
+        "tạm biệt ",
+        "tam biet ",
         "cảm ơn ",
         "cam on ",
     )
     if any(q.startswith(p) for p in prefixes) and len(q) < 80:
+        if q.startswith("tạm biệt ") or q.startswith("tam biet "):
+            return _BYE_REPLY
         return _GREETING_REPLY
 
     if "bạn là ai" in q or "ban la ai" in q or "you are" in q:
@@ -51,3 +62,5 @@ _WHO_REPLY = (
     "Tôi là chatbot RAG demo: truy xuất các đoạn văn bản luật liên quan rồi tóm tắt trả lời. "
     "Tôi không thay thế tư vấn pháp lý chính thức."
 )
+
+_BYE_REPLY = "Tạm biệt. Khi cần tra cứu thêm quy định giao thông, bạn cứ nhắn mình."

@@ -75,6 +75,7 @@ def main() -> None:
                 "page_start": r.get("page_start"),
                 "page_end": r.get("page_end"),
                 "chunk_text": r.get("chunk_text"),
+                "business_group": (r.get("business_group") or "general"),
             }
         )
 
@@ -96,6 +97,51 @@ def main() -> None:
             f.write(json.dumps(m, ensure_ascii=False) + "\n")
 
     print(f"DONE build_embeddings_file_based (TF-IDF) -> {persist_dir}")
+
+
+def rebuild_tfidf_vector_store(*, project_root: Path | None = None) -> Path:
+    """Xoá vectorizer/matrix/metas cũ và build lại từ toàn bộ *.jsonl trong CHUNKS_DIR."""
+    root = project_root or PROJECT_ROOT
+    load_dotenv(root / ".env")
+    persist_dir = root / os.getenv("VECTOR_STORE_DIR", "data/vector_db/file_based_demo")
+    persist_dir.mkdir(parents=True, exist_ok=True)
+    vectorizer_path = persist_dir / os.getenv("TFIDF_VECTORIZER_FILENAME", "vectorizer.joblib")
+    matrix_path = persist_dir / os.getenv("TFIDF_MATRIX_FILENAME", "tfidf_matrix.joblib")
+    metas_path = persist_dir / os.getenv("METAS_FILENAME", "metadatas.jsonl")
+    for p in (vectorizer_path, matrix_path, metas_path):
+        if p.exists():
+            p.unlink()
+    records = iter_chunk_records()
+    if not records:
+        raise RuntimeError("Không có chunk để embed.")
+    chunk_texts = [r["chunk_text"] for r in records]
+    meta_records = []
+    for r in records:
+        meta_records.append(
+            {
+                "chunk_id": r.get("chunk_id"),
+                "doc_id": r.get("doc_id"),
+                "law_number": r.get("law_number"),
+                "title": r.get("title"),
+                "article_ref": r.get("article_ref"),
+                "page_start": r.get("page_start"),
+                "page_end": r.get("page_end"),
+                "chunk_text": r.get("chunk_text"),
+                "business_group": (r.get("business_group") or "general"),
+            }
+        )
+    vectorizer = TfidfVectorizer(
+        max_features=50000,
+        ngram_range=(1, 2),
+        lowercase=True,
+    )
+    tfidf_matrix = vectorizer.fit_transform(chunk_texts)
+    joblib.dump(vectorizer, vectorizer_path)
+    joblib.dump(tfidf_matrix, matrix_path)
+    with metas_path.open("w", encoding="utf-8") as f:
+        for m in meta_records:
+            f.write(json.dumps(m, ensure_ascii=False) + "\n")
+    return persist_dir
 
 
 if __name__ == "__main__":

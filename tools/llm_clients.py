@@ -13,7 +13,14 @@ def _load_env() -> None:
         load_dotenv(os.path.join(base, ".env"))
 
 
-def ask_llm_ollama(base_url: str, model: str, system_prompt: str, user_prompt: str) -> str:
+def ask_llm_ollama(
+    base_url: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    max_predict_tokens: int | None = None,
+) -> str:
     # Ollama /api/chat expects messages with role/content
     url = base_url.rstrip("/") + "/api/chat"
     _load_env()
@@ -21,6 +28,17 @@ def ask_llm_ollama(base_url: str, model: str, system_prompt: str, user_prompt: s
         temp = float(os.getenv("OLLAMA_TEMPERATURE", "0.15"))
     except ValueError:
         temp = 0.15
+    options: dict[str, Any] = {"temperature": temp}
+    npred = max_predict_tokens
+    if npred is None:
+        raw_np = os.getenv("OLLAMA_NUM_PREDICT", "").strip()
+        if raw_np:
+            try:
+                npred = int(raw_np)
+            except ValueError:
+                npred = None
+    if npred is not None and npred > 0:
+        options["num_predict"] = npred
     payload: dict[str, Any] = {
         "model": model,
         "messages": [
@@ -28,7 +46,7 @@ def ask_llm_ollama(base_url: str, model: str, system_prompt: str, user_prompt: s
             {"role": "user", "content": user_prompt},
         ],
         "stream": False,
-        "options": {"temperature": temp},
+        "options": options,
     }
     r = requests.post(url, json=payload, timeout=120)
     r.raise_for_status()
@@ -63,7 +81,13 @@ def reflect_answer_grounded(
         f"Answer:\n{answer[:1500]}"
     )
     try:
-        raw = ask_llm_ollama(ollama_base, ollama_model, _REFLECT_SYSTEM, user).upper()
+        raw = ask_llm_ollama(
+            ollama_base,
+            ollama_model,
+            _REFLECT_SYSTEM,
+            user,
+            max_predict_tokens=24,
+        ).upper()
     except Exception:
         return True
 

@@ -48,7 +48,14 @@ def split_if_too_long(text: str, max_chars: int) -> list[str]:
     return chunks
 
 
-def chunk_by_article(pages: list[dict], doc_id: str, law_number: str, title: str, max_chars: int) -> list[dict]:
+def chunk_by_article(
+    pages: list[dict],
+    doc_id: str,
+    law_number: str,
+    title: str,
+    max_chars: int,
+    business_group: str = "general",
+) -> list[dict]:
     full_text = "\n\n".join([normalize_ws(p.get("text", "")) for p in pages if p.get("text")])
     if not full_text:
         return []
@@ -73,6 +80,7 @@ def chunk_by_article(pages: list[dict], doc_id: str, law_number: str, title: str
                     "page_start": None,
                     "page_end": None,
                     "chunk_text": sub_text,
+                    "business_group": business_group,
                 }
             )
         return chunks
@@ -102,6 +110,7 @@ def chunk_by_article(pages: list[dict], doc_id: str, law_number: str, title: str
                     "page_start": page_start,
                     "page_end": page_end,
                     "chunk_text": sub_text,
+                    "business_group": business_group,
                 }
             )
     return chunks
@@ -134,12 +143,14 @@ def main() -> None:
         raw = json.loads(text_path.read_text(encoding="utf-8"))
         pages = raw.get("pages", [])
         print(f"CHUNK {doc_id}")
+        bg = str(doc.get("business_group") or "general").strip() or "general"
         chunks = chunk_by_article(
             pages=pages,
             doc_id=doc_id,
             law_number=doc["law_number"],
             title=doc["title"],
             max_chars=args.max_chars,
+            business_group=bg,
         )
 
         with out_path.open("w", encoding="utf-8") as f:

@@ -8,3 +8,7 @@ __pycache__/
 .mypy_cache/
 .DS_Store
 Thumbs.db
+
+# Runtime/cache artifacts (regenerated locally)
+data/cache/
+logs/

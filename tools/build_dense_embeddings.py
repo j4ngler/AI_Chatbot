@@ -61,5 +61,29 @@ def main() -> None:
     print(f"DONE dense embeddings shape={arr.shape} -> {dense_path}")
 
 
+def rebuild_dense_vector_store(*, project_root: Path | None = None, batch_size: int = 32) -> Path:
+    """Ghi đè dense_matrix.npy đồng bộ thứ tự với iter_chunk_records()."""
+    root = project_root or PROJECT_ROOT
+    load_dotenv(root / ".env")
+    persist_dir = root / os.getenv("VECTOR_STORE_DIR", "data/vector_db/file_based_demo")
+    dense_path = persist_dir / os.getenv("DENSE_MATRIX_FILENAME", "dense_matrix.npy")
+    model_name = os.getenv("DENSE_MODEL_NAME", "paraphrase-multilingual-MiniLM-L12-v2")
+    records = iter_chunk_records()
+    texts = [r.get("chunk_text") or "" for r in records]
+    if not texts:
+        raise RuntimeError("Không có chunk_text.")
+    model = SentenceTransformer(model_name)
+    embeddings = model.encode(
+        texts,
+        batch_size=batch_size,
+        show_progress_bar=False,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+    )
+    arr = embeddings.astype(np.float32)
+    np.save(dense_path, arr)
+    return dense_path
+
+
 if __name__ == "__main__":
     main()

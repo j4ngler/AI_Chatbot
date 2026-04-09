@@ -43,7 +43,9 @@ class ChemicalLookupService:
             return out
 
         output = self.worker.fetch(query=q, query_type=query_type, request_id=request_id)
-        self.cache_store.set(q, str(query_type), output)
+        # Không cache phản hồi ERROR (đặc biệt circuit breaker), tránh "dính" lỗi cũ nhiều giờ.
+        if output.status == "OK":
+            self.cache_store.set(q, str(query_type), output)
 
         return output
 
