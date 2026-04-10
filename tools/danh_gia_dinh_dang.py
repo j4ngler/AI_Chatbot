@@ -56,6 +56,8 @@ class EvaluationResult:
     total_checks: int
     violations: List[Violation]
     summary: Dict[str, int]
+    autofix_applied: int = 0
+    output_file: str = ""
 
 
 def heading_level(style_name: str) -> Optional[int]:
@@ -68,6 +70,36 @@ def heading_level(style_name: str) -> Optional[int]:
 
 def normalize_text(s: str) -> str:
     return re.sub(r"\s+", " ", s.strip())
+
+
+def _find_style_name(doc: Document, target_level: Optional[int]) -> Optional[str]:
+    if target_level is None:
+        preferred = ["Normal"]
+    else:
+        preferred = [f"Heading {target_level}"]
+    # Tim nhanh theo ten uu tien.
+    style_names = [s.name for s in doc.styles if getattr(s, "name", None)]
+    for p in preferred:
+        if p in style_names:
+            return p
+    # Fallback cho style heading dat ten khac/khong dong nhat.
+    if target_level is not None:
+        for name in style_names:
+            low = name.lower()
+            if "heading" in low and re.search(rf"\b{target_level}\b", low):
+                return name
+    return None
+
+
+def _set_paragraph_style(doc: Document, para: object, expected_level: Optional[int]) -> bool:
+    style_name = _find_style_name(doc, expected_level)
+    if not style_name:
+        return False
+    try:
+        para.style = doc.styles[style_name]
+        return True
+    except Exception:
+        return False
 
 
 def build_patterns() -> Dict[str, List[Tuple[Pattern[str], Optional[int], str]]]:
@@ -120,6 +152,9 @@ def build_patterns() -> Dict[str, List[Tuple[Pattern[str], Optional[int], str]]]
 def evaluate_docx(
     file_path: Path,
     profile: str,
+    *,
+    autofix: bool = False,
+    output_docx: Optional[Path] = None,
 ) -> EvaluationResult:
     patterns = build_patterns()
     if profile not in patterns:
@@ -128,6 +163,7 @@ def evaluate_docx(
     doc = Document(str(file_path))
     violations: List[Violation] = []
     checks = 0
+    autofix_applied = 0
 
     for idx, para in enumerate(doc.paragraphs, start=1):
         text = normalize_text(para.text)
@@ -149,6 +185,8 @@ def evaluate_docx(
                                 rule=rule,
                             )
                         )
+                        if autofix and _set_paragraph_style(doc, para, None):
+                            autofix_applied += 1
                 elif h_level != expected_level:
                     actual = "No Heading" if h_level is None else f"Heading {h_level}"
                     violations.append(
@@ -160,6 +198,8 @@ def evaluate_docx(
                             rule=rule,
                         )
                     )
+                    if autofix and _set_paragraph_style(doc, para, expected_level):
+                        autofix_applied += 1
 
     if checks == 0:
         score = 0.0
@@ -171,6 +211,11 @@ def evaluate_docx(
         "violations": len(violations),
         "passed": max(checks - len(violations), 0),
     }
+    out_file = ""
+    if autofix and output_docx:
+        output_docx.parent.mkdir(parents=True, exist_ok=True)
+        doc.save(str(output_docx))
+        out_file = str(output_docx)
 
     return EvaluationResult(
         profile=profile,
@@ -179,6 +224,8 @@ def evaluate_docx(
         total_checks=checks,
         violations=violations,
         summary=summary,
+        autofix_applied=autofix_applied,
+        output_file=out_file,
     )
 
 
@@ -190,6 +237,10 @@ def format_text_report(result: EvaluationResult, max_items: int) -> str:
     lines.append(f"Diem: {result.score}/100")
     lines.append(f"So luong quy tac khop: {result.total_checks}")
     lines.append(f"So loi: {len(result.violations)}")
+    if result.output_file:
+        lines.append(f"Autofix: da ap dung {result.autofix_applied} sua -> {result.output_file}")
+    elif result.autofix_applied:
+        lines.append(f"Autofix: da ap dung {result.autofix_applied} sua")
     lines.append("")
 
     if result.total_checks == 0:
@@ -234,6 +285,16 @@ def parse_args(argv: Optional[Iterable[str]] = None) -> argparse.Namespace:
         default=20,
         help="So dong loi toi da hien thi tren console",
     )
+    parser.add_argument(
+        "--autofix",
+        action="store_true",
+        help="Tu dong sua style heading theo profile va xuat file DOCX moi",
+    )
+    parser.add_argument(
+        "--output-docx",
+        default="",
+        help="Duong dan file DOCX sau khi autofix. Mac dinh: <input>_fixed.docx",
+    )
     return parser.parse_args(argv)
 
 
@@ -247,7 +308,10 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         print("Chi ho tro file .docx")
         return 2
 
-    result = evaluate_docx(file_path, args.profile)
+    output_docx = None
+    if args.autofix:
+        output_docx = Path(args.output_docx) if args.output_docx else file_path.with_name(f"{file_path.stem}_fixed.docx")
+    result = evaluate_docx(file_path, args.profile, autofix=args.autofix, output_docx=output_docx)
     print(format_text_report(result, args.max_items))
 
     if args.output_json:

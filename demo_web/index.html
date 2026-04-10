@@ -457,6 +457,74 @@
       font-size: 0.84rem;
       padding: 0.45rem 0.55rem;
     }
+    .ingest-row {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.45rem;
+    }
+    .ingest-row input[type="text"] {
+      min-width: 180px;
+      max-width: 320px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0f1826;
+      color: var(--text);
+      font-size: 0.82rem;
+      padding: 0.45rem 0.55rem;
+    }
+    .ingest-note {
+      width: 100%;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .pending-wrap {
+      width: 100%;
+      margin-top: 0.4rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0f1826;
+      padding: 0.55rem;
+    }
+    .pending-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.45rem;
+      margin-bottom: 0.45rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .pending-list {
+      max-height: 180px;
+      overflow: auto;
+      display: grid;
+      gap: 0.4rem;
+    }
+    .pending-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.45rem 0.5rem;
+      background: #111d2d;
+      font-size: 0.78rem;
+    }
+    .pending-meta {
+      color: var(--muted);
+      font-size: 0.74rem;
+      margin-top: 0.2rem;
+    }
+    .pending-actions {
+      display: flex;
+      gap: 0.35rem;
+      margin-top: 0.35rem;
+      flex-wrap: wrap;
+    }
+    .pending-empty {
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding: 0.3rem 0.2rem;
+    }
     .cosing-batch-wrap { margin-top: 0.65rem; width: 100%; overflow-x: auto; }
     .cosing-batch-wrap table {
       width: 100%;
@@ -573,6 +641,27 @@
               <option value="">Tất cả nhóm</option>
             </select>
           </div>
+          <div class="ingest-row" id="ingestRow">
+            <input type="file" id="ingestFileInput" accept=".pdf,.png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" style="display:none" />
+            <button type="button" class="batch-csv-btn" id="ingestPickBtn">Tải tài liệu (PDF/Ảnh)</button>
+            <button type="button" class="batch-csv-btn hidden" id="ingestClearBtn">Bỏ file</button>
+            <span class="cosing-file-name" id="ingestFileName"></span>
+            <input type="text" id="ingestTitleInput" placeholder="Tiêu đề tài liệu (tuỳ chọn)" />
+            <input type="text" id="ingestTagInput" placeholder="Tag/nhóm (vd: my_pham, thuc_pham)" />
+            <button type="button" class="batch-csv-btn" id="ingestUploadBtn">Nạp vào hệ thống</button>
+            <label style="font-size:0.76rem;color:var(--muted);display:inline-flex;align-items:center;gap:0.28rem;">
+              <input type="checkbox" id="ingestAutoApprove" checked />
+              Tự duyệt + rebuild index
+            </label>
+            <div class="ingest-note">File sẽ được trích xuất text rồi đưa vào kho. Nếu tắt tự duyệt, tài liệu sẽ ở trạng thái pending để duyệt sau.</div>
+            <div class="pending-wrap">
+              <div class="pending-head">
+                <span>Danh sách tài liệu pending</span>
+                <button type="button" class="batch-csv-btn" id="ingestPendingReloadBtn" style="margin-top:0;padding:0.26rem 0.55rem;">Tải lại</button>
+              </div>
+              <div class="pending-list" id="ingestPendingList"></div>
+            </div>
+          </div>
           <div class="cosing-file-row hidden" id="cosingFileRow">
             <input type="file" id="cosingFileInput" accept=".txt,.csv,text/plain,text/csv" style="display:none" />
             <button type="button" class="batch-csv-btn" id="cosingFilePickBtn">Chọn file .txt / .csv</button>
@@ -641,6 +730,18 @@
       const cosingFilePickBtn = document.getElementById("cosingFilePickBtn");
       const cosingFileClearBtn = document.getElementById("cosingFileClearBtn");
       const cosingFileName = document.getElementById("cosingFileName");
+      const ingestRow = document.getElementById("ingestRow");
+      const ingestFileInput = document.getElementById("ingestFileInput");
+      const ingestPickBtn = document.getElementById("ingestPickBtn");
+      const ingestClearBtn = document.getElementById("ingestClearBtn");
+      const ingestFileName = document.getElementById("ingestFileName");
+      const ingestUploadBtn = document.getElementById("ingestUploadBtn");
+      const ingestTitleInput = document.getElementById("ingestTitleInput");
+      const ingestTagInput = document.getElementById("ingestTagInput");
+      const ingestAutoApprove = document.getElementById("ingestAutoApprove");
+      const ingestPendingReloadBtn = document.getElementById("ingestPendingReloadBtn");
+      const ingestPendingList = document.getElementById("ingestPendingList");
+      let ingestPendingFile = null;
       let historyQuery = "";
 
       function uid() { return "s-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
@@ -753,6 +854,7 @@
         inputWrap.classList.toggle("mode-cos", mode === "cosing");
         modeBadge.textContent = "Chế độ: " + (mode === "law" ? "Pháp luật" : "CoSIng");
         document.getElementById("lawGroupRow").style.display = mode === "law" ? "flex" : "none";
+        ingestRow.classList.toggle("hidden", mode !== "law");
         cosingFileRow.classList.toggle("hidden", mode !== "cosing");
         if (mode !== "cosing") {
           cosingPendingFile = null;
@@ -763,6 +865,145 @@
         subNote.textContent = mode === "law"
           ? "Mẹo: Enter để gửi, Shift+Enter để xuống dòng. Có thể chọn nhóm tài liệu để thu hẹp phạm vi tra cứu (sau khi server đã rebuild index)."
           : "Một dòng = một thành phần; nhiều dòng = batch. Hoặc chọn file .txt/.csv rồi bấm Gửi (upload server). Có thể mất lâu; bấm ô vuông trên nút gửi để dừng.";
+      }
+      function resetIngestSelectedFile() {
+        ingestPendingFile = null;
+        if (ingestFileInput) ingestFileInput.value = "";
+        if (ingestFileName) ingestFileName.textContent = "";
+        if (ingestClearBtn) ingestClearBtn.classList.add("hidden");
+      }
+      async function refreshPendingIngestList() {
+        if (!ingestPendingList) return;
+        ingestPendingList.innerHTML = '<div class="pending-empty">Đang tải...</div>';
+        try {
+          const r = await apiFetch("/api/ingest/pending");
+          const data = await r.json().catch(function () { return null; });
+          if (!r.ok || !data || !Array.isArray(data.items)) throw new Error("Không tải được pending.");
+          const items = data.items || [];
+          if (!items.length) {
+            ingestPendingList.innerHTML = '<div class="pending-empty">Không có tài liệu chờ duyệt.</div>';
+            return;
+          }
+          ingestPendingList.innerHTML = "";
+          items.forEach(function (it) {
+            const div = document.createElement("div");
+            div.className = "pending-item";
+            const title = (it.title || it.filename || "Tài liệu").toString();
+            const id = (it.id || "").toString();
+            const bg = (it.business_group || "general").toString();
+            div.innerHTML =
+              "<div><strong>" + escapeHtml(title) + "</strong></div>" +
+              "<div class=\"pending-meta\">ID: " + escapeHtml(id) + " · tag: " + escapeHtml(bg) + "</div>";
+            const actions = document.createElement("div");
+            actions.className = "pending-actions";
+            const approve = document.createElement("button");
+            approve.type = "button";
+            approve.className = "batch-csv-btn";
+            approve.style.marginTop = "0";
+            approve.style.padding = "0.26rem 0.55rem";
+            approve.textContent = "Duyệt";
+            approve.addEventListener("click", async function () {
+              approve.disabled = true;
+              reject.disabled = true;
+              try {
+                const a = await apiFetch("/api/ingest/" + encodeURIComponent(id) + "/approve", { method: "POST" });
+                const ad = await a.json().catch(function () { return null; });
+                if (!a.ok || !ad || !ad.ok) throw new Error((ad && ad.detail) || "Duyệt thất bại.");
+                showError("Đã duyệt: " + title);
+                setTimeout(function () { showError(""); }, 2200);
+                await loadDocumentGroups();
+                await refreshPendingIngestList();
+              } catch (e) {
+                showError(e && e.message ? e.message : "Lỗi duyệt tài liệu.");
+                approve.disabled = false;
+                reject.disabled = false;
+              }
+            });
+            const reject = document.createElement("button");
+            reject.type = "button";
+            reject.className = "batch-csv-btn";
+            reject.style.marginTop = "0";
+            reject.style.padding = "0.26rem 0.55rem";
+            reject.textContent = "Từ chối";
+            reject.addEventListener("click", async function () {
+              reject.disabled = true;
+              approve.disabled = true;
+              try {
+                const rr = await apiFetch("/api/ingest/" + encodeURIComponent(id) + "/reject", { method: "POST" });
+                const rd = await rr.json().catch(function () { return null; });
+                if (!rr.ok || !rd || !rd.ok) throw new Error((rd && rd.detail) || "Từ chối thất bại.");
+                showError("Đã từ chối: " + title);
+                setTimeout(function () { showError(""); }, 2200);
+                await refreshPendingIngestList();
+              } catch (e) {
+                showError(e && e.message ? e.message : "Lỗi từ chối tài liệu.");
+                reject.disabled = false;
+                approve.disabled = false;
+              }
+            });
+            actions.appendChild(approve);
+            actions.appendChild(reject);
+            div.appendChild(actions);
+            ingestPendingList.appendChild(div);
+          });
+        } catch (e) {
+          ingestPendingList.innerHTML = '<div class="pending-empty">Không tải được danh sách pending.</div>';
+        }
+      }
+      async function uploadIngestDocument() {
+        if (!ingestPendingFile) {
+          showError("Bạn chưa chọn file để nạp.");
+          return;
+        }
+        const lawGroupSelect = document.getElementById("lawGroupSelect");
+        const selectedGroup = lawGroupSelect && (lawGroupSelect.value || "").trim();
+        const manualTag = (ingestTagInput.value || "").trim();
+        const businessGroup = manualTag || selectedGroup || "general";
+        const title = (ingestTitleInput.value || "").trim() || ingestPendingFile.name;
+        showError("");
+        ingestUploadBtn.disabled = true;
+        pushMessage("user", "[Nạp tài liệu] " + ingestPendingFile.name + " | tag=" + businessGroup, {});
+        const loadingId = pushMessage("assistant", "Đang upload và trích xuất nội dung tài liệu...", { loading: true });
+        try {
+          const fd = new FormData();
+          fd.append("file", ingestPendingFile);
+          fd.append("business_group", businessGroup);
+          fd.append("title", title);
+          const r = await apiFetch("/api/ingest/upload", { method: "POST", body: fd });
+          const data = await r.json().catch(function () { return null; });
+          if (!r.ok || !data || !data.ok || !data.record) {
+            throw new Error((data && data.detail) || (data && data.error) || "Upload thất bại.");
+          }
+          const rec = data.record;
+          let msg =
+            "Đã nhận tài liệu: " + (rec.title || title) + "\n" +
+            "- ID: " + (rec.id || "—") + "\n" +
+            "- Tag (business_group): " + (rec.business_group || businessGroup) + "\n" +
+            "- Trạng thái: " + (rec.status || "pending");
+          if (ingestAutoApprove && ingestAutoApprove.checked && rec.id) {
+            updateAssistantMessage(loadingId, "Đã upload. Đang duyệt và rebuild index...", { loading: true });
+            const a = await apiFetch("/api/ingest/" + encodeURIComponent(rec.id) + "/approve", { method: "POST" });
+            const ad = await a.json().catch(function () { return null; });
+            if (!a.ok || !ad || !ad.ok) {
+              throw new Error((ad && ad.detail) || (ad && ad.error) || "Duyệt tài liệu thất bại.");
+            }
+            msg += "\n- Duyệt: thành công\n- Index: đã rebuild và nạp lại.";
+            await loadDocumentGroups();
+            await refreshPendingIngestList();
+          } else {
+            msg += "\n- Chưa duyệt: vào API /api/ingest/pending để duyệt sau.";
+            await refreshPendingIngestList();
+          }
+          updateAssistantMessage(loadingId, msg, { loading: false, citations: [], citation_details: [] });
+          resetIngestSelectedFile();
+          ingestTitleInput.value = "";
+          ingestTagInput.value = "";
+        } catch (e) {
+          updateAssistantMessage(loadingId, "Nạp tài liệu thất bại. Vui lòng kiểm tra định dạng file và thử lại.", { loading: false, citations: [], citation_details: [] });
+          showError(e && e.message ? e.message : "Có lỗi khi nạp tài liệu.");
+        } finally {
+          ingestUploadBtn.disabled = false;
+        }
       }
       function pushMessage(role, content, extra) {
         const s = getCurrentSession();
@@ -1357,6 +1598,21 @@
         setTimeout(function () { showError(""); }, 2500);
       });
       cosingFilePickBtn.addEventListener("click", function () { cosingFileInput.click(); });
+      ingestPickBtn.addEventListener("click", function () { ingestFileInput.click(); });
+      ingestClearBtn.addEventListener("click", function () { resetIngestSelectedFile(); });
+      ingestFileInput.addEventListener("change", function () {
+        const f = ingestFileInput.files && ingestFileInput.files[0];
+        if (!f) return;
+        ingestPendingFile = f;
+        ingestFileName.textContent = f.name;
+        ingestClearBtn.classList.remove("hidden");
+      });
+      ingestUploadBtn.addEventListener("click", function () {
+        uploadIngestDocument();
+      });
+      ingestPendingReloadBtn.addEventListener("click", function () {
+        refreshPendingIngestList();
+      });
       cosingFileClearBtn.addEventListener("click", function () {
         cosingPendingFile = null;
         cosingFileInput.value = "";
@@ -1426,6 +1682,7 @@
       }
       setMode("law");
       loadDocumentGroups();
+      refreshPendingIngestList();
       autoExpand();
       refreshSendState();
       if (loadSidebarCollapsed()) appEl.classList.add("sidebar-collapsed");
