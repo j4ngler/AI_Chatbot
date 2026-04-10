@@ -18,6 +18,7 @@
       --danger: #f87171;
     }
     * { box-sizing: border-box; }
+    html { color-scheme: dark; }
     body {
       margin: 0;
       height: 100vh;
@@ -42,7 +43,12 @@
       flex-direction: column;
       min-height: 0;
     }
-    .sidebar-top { display: flex; flex-direction: column; min-height: 0; }
+    .sidebar-top {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
     .brand { font-size: 1.02rem; font-weight: 700; margin-bottom: 0.75rem; }
     .new-chat {
       border: 1px solid #4a6d99;
@@ -67,6 +73,7 @@
     }
     .side-content {
       margin-top: 0.7rem;
+      flex: 1;
       min-height: 0;
       overflow: auto;
       padding-right: 0.2rem;
@@ -185,6 +192,7 @@
     .chat-scroll {
       min-height: 0;
       overflow: auto;
+      scroll-behavior: smooth;
       padding: 1rem;
       max-width: 980px;
       width: 100%;
@@ -362,6 +370,10 @@
       animation: shimmer 1.3s infinite;
     }
     @keyframes shimmer { to { transform: translateX(120%); } }
+    @media (prefers-reduced-motion: reduce) {
+      .chat-scroll { scroll-behavior: auto; }
+      .skeleton::after { animation: none; }
+    }
     .input-wrap {
       border-top: 1px solid var(--border);
       padding: 0.8rem 1rem 1rem;
