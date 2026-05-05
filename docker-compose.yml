@@ -1,17 +1,93 @@
-# Demo: docker compose up --build
-# Giao diện: http://localhost:8000/  |  API: POST http://localhost:8000/chat
-# Sao chép .env.example thành .env; LLM qua Ollama (OLLAMA_BASE_URL, ví dụ host.docker.internal).
+# Toàn bộ stack chạy trong thư mục dự án này — không phụ thuộc đường dẫn ngoài.
+# Máy dev KHÔNG có Docker: dùng scripts/run_api_local.ps1 (Windows) hoặc scripts/run_api_local.sh (Linux/VPS),
+# DATABASE_URL=sqlite:///... hoặc PostgreSQL cài tay — xem .env.example.
+# Triển khai VPS: có thể chỉ cài Docker trên VPS, hoặc chạy bare metal theo script + Nginx.
+#
+# Chỉ API chatbot (mặc định):     docker compose up -d
+# PostgreSQL + Odoo 19 + API:      docker compose --profile erp up -d
+#
+# Addon tùy chỉnh: ./odoo_addons → /mnt/extra-addons (Odoo dùng image odoo:19.0).
+# Sao chép .env từ .env.example; đặt POSTGRES_PASSWORD trước khi deploy production.
+#
+# Demo quản trị (React /erp + /api/erp/* + PostgreSQL riêng): dịch vụ erp_demo_db luôn bật cùng api.
+
 services:
+  erp_demo_db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${ERP_DEMO_DB_USER:-erp_demo}
+      POSTGRES_PASSWORD: ${ERP_DEMO_DB_PASSWORD:-erp_demo}
+      POSTGRES_DB: ${ERP_DEMO_DB_NAME:-luat_erp_demo}
+    volumes:
+      - erp-demo-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      erp_demo_db:
+        condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${API_HTTP_PORT:-8000}:8000"
     env_file:
       - path: .env
         required: false
     environment:
-      # Ghi đè khi cần (ví dụ Ollama chạy trên máy host: host.docker.internal)
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-    # volumes:
-    #   - ./data/vector_db/file_based_demo:/app/data/vector_db/file_based_demo
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://erp_demo:erp_demo@erp_demo_db:5432/luat_erp_demo}
+      ODOO_BASE_URL: ${ODOO_BASE_URL:-http://host.docker.internal:8069}
+      ODOO_DB: ${ODOO_DB:-}
+      JWT_SECRET: ${JWT_SECRET:-dev-change-me-in-production}
+    volumes:
+      - ./data/vector_db/file_based_demo:/app/data/vector_db/file_based_demo
+      - ./data/cache:/app/data/cache
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
+
+  db:
+    profiles: [erp]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-odoo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-odoo}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    volumes:
+      - odoo-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  odoo:
+    profiles: [erp]
+    image: odoo:19.0
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${ODOO_HTTP_PORT:-8069}:8069"
+    environment:
+      HOST: db
+      USER: ${POSTGRES_USER:-odoo}
+      PASSWORD: ${POSTGRES_PASSWORD:-odoo}
+    volumes:
+      - odoo-web-data:/var/lib/odoo
+      - ./odoo_addons:/mnt/extra-addons:ro
+    restart: unless-stopped
+
+volumes:
+  erp-demo-pg-data:
+  odoo-db-data:
+  odoo-web-data:

@@ -12,3 +12,19 @@ Thumbs.db
 # Runtime/cache artifacts (regenerated locally)
 data/cache/
 logs/
+
+# Odoo filestore & sessions (khi chạy với --data-dir=.odoo_data)
+.odoo_data/
+
+# Full Odoo source sau khi chạy scripts/sync_odoo_from_source.ps1 (GB; không commit)
+vendor/odoo/
+
+# Build Vite (demo quản trị); Docker/Dockerfile tự build khi cần
+enterprise_web/dist/
+enterprise_web/node_modules/
+
+# SQLite demo ERP khi chạy không Docker (scripts/run_api_local*)
+data/erp_demo_local.db
+
+# Thư mục tạm cục bộ
+tmp/

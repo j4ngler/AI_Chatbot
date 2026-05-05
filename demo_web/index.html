@@ -11,6 +11,7 @@
       --panel: #182334;
       --panel-2: #223046;
       --border: #2b3d57;
+      --border-strong: #3e4b5b;
       --text: #e8edf6;
       --muted: #9db0c7;
       --law: #3d8bfd;
@@ -54,7 +55,7 @@
       border: 1px solid #4a6d99;
       background: linear-gradient(180deg, #2a4770 0%, #203a5d 100%);
       color: var(--text);
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 0.7rem 0.85rem;
       font-weight: 700;
       cursor: pointer;
@@ -138,6 +139,9 @@
       display: flex;
       flex-direction: column;
       gap: 0.45rem;
+      position: sticky;
+      bottom: 0;
+      background: linear-gradient(180deg, rgba(17, 26, 39, 0.35), rgba(17, 26, 39, 0.95) 26%);
     }
     .account-btn, .collapse-btn {
       width: 100%;
@@ -178,6 +182,7 @@
       justify-content: space-between;
       gap: 0.8rem;
       background: rgba(17, 26, 39, 0.5);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     .topbar h1 { margin: 0; font-size: 1.05rem; }
     .topbar p { margin: 0.12rem 0 0; color: var(--muted); font-size: 0.82rem; }
@@ -188,6 +193,7 @@
       background: #0f1826;
       border-radius: 999px;
       padding: 0.28rem 0.62rem;
+      transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
     }
     .chat-scroll {
       min-height: 0;
@@ -215,8 +221,18 @@
       color: var(--text);
       font-size: 0.87rem;
       cursor: pointer;
+      min-height: 56px;
     }
     .suggest-card:hover { background: #20324c; }
+    .suggest-card[data-mode="law"]::before,
+    .suggest-card[data-mode="cosing"]::before {
+      display: inline-block;
+      margin-right: 0.4rem;
+      font-size: 0.86rem;
+      opacity: 0.95;
+    }
+    .suggest-card[data-mode="law"]::before { content: "⚖"; }
+    .suggest-card[data-mode="cosing"]::before { content: "🧪"; }
     .row { display: flex; margin-bottom: 0.9rem; }
     .row.user { justify-content: flex-end; }
     .row-inner {
@@ -382,12 +398,14 @@
     .composer {
       max-width: 980px;
       margin: 0 auto;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-strong);
       border-radius: 16px;
       background: #121d2c;
-      padding: 0.55rem;
+      padding: 0.62rem;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .mode-switch { display: flex; gap: 0.35rem; margin-bottom: 0.48rem; }
+    .mode-switch { display: flex; gap: 0.35rem; margin-bottom: 0.48rem; align-items: center; flex-wrap: wrap; }
     .mode-btn {
       border: none;
       border-radius: 999px;
@@ -399,10 +417,81 @@
     }
     .mode-btn.active { color: #fff; background: #1e2f47; box-shadow: inset 0 0 0 1px #345985; }
     .mode-btn.cos.active { background: #30214f; box-shadow: inset 0 0 0 1px #5b3ea1; }
+    .group-inline {
+      margin-left: auto;
+      min-width: 170px;
+      max-width: 260px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #0f1826;
+      color: var(--text);
+      font-size: 0.8rem;
+      padding: 0.34rem 0.55rem;
+    }
+    .quick-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-bottom: 0.45rem;
+    }
+    .action-btn {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #17263a;
+      color: var(--text);
+      padding: 0.36rem 0.72rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+    }
+    .action-btn:hover { filter: brightness(1.08); }
+    .action-btn:active { transform: translateY(1px); }
+    .action-btn.active {
+      background: #20324c;
+      border-color: #4f78a8;
+      color: #eaf3ff;
+      box-shadow: inset 0 0 0 1px rgba(101, 167, 255, 0.35);
+    }
+    .action-btn.plus {
+      width: 34px;
+      justify-content: center;
+      padding: 0.36rem 0;
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+    .tool-panel {
+      margin-bottom: 0.55rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #0f1826;
+      padding: 0.55rem;
+    }
+    .attachment-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 0.5rem;
+    }
+    .attachment-chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #1a2a40;
+      color: #d9e8f8;
+      font-size: 0.77rem;
+      max-width: 100%;
+      padding: 0.28rem 0.58rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .composer-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: end; }
     #input {
       border-radius: 11px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-strong);
       background: #0f1826;
       color: var(--text);
       font-size: 1rem;
@@ -415,6 +504,26 @@
     }
     #input:focus { outline: 2px solid var(--law); outline-offset: 1px; }
     .mode-cos #input:focus { outline-color: var(--cos); }
+    .mode-law .composer { border-color: #3e4f66; }
+    .mode-law .topbar { border-bottom-color: #354b6a; }
+    .mode-law .mode-badge {
+      color: #b7d8ff;
+      border-color: #355b86;
+      background: rgba(27, 48, 75, 0.72);
+    }
+    .mode-cos .composer {
+      border-color: #4a3b67;
+      box-shadow: 0 12px 28px rgba(46, 24, 74, 0.28);
+    }
+    .mode-cos .topbar {
+      border-bottom-color: #4a3b67;
+      box-shadow: inset 0 -1px 0 rgba(139, 92, 246, 0.12);
+    }
+    .mode-cos .mode-badge {
+      color: #ddcbff;
+      border-color: #6c53a9;
+      background: rgba(44, 31, 70, 0.8);
+    }
     .send {
       width: 46px;
       height: 46px;
@@ -462,7 +571,15 @@
       align-items: center;
       gap: 0.45rem;
       flex-wrap: wrap;
-      margin-bottom: 0.45rem;
+      margin-bottom: 0.25rem;
+    }
+    .ingest-advanced {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem;
+      padding-top: 0.15rem;
     }
     .ingest-row input[type="text"] {
       min-width: 180px;
@@ -481,10 +598,10 @@
     }
     .pending-wrap {
       width: 100%;
-      margin-top: 0.4rem;
+      margin-top: 0.2rem;
       border: 1px solid var(--border);
       border-radius: 10px;
-      background: #0f1826;
+      background: #121f31;
       padding: 0.55rem;
     }
     .pending-head {
@@ -547,7 +664,6 @@
     .cosing-batch-wrap .st-empty { color: #fbbf24; }
     .cosing-batch-wrap .st-err { color: var(--danger); }
     .batch-csv-btn {
-      margin-top: 0.5rem;
       border: 1px solid var(--border);
       border-radius: 10px;
       background: #18263b;
@@ -562,7 +678,7 @@
       align-items: center;
       gap: 0.45rem;
       flex-wrap: wrap;
-      margin-bottom: 0.45rem;
+      margin-bottom: 0;
     }
     .cosing-file-row.hidden { display: none !important; }
     .cosing-file-name { font-size: 0.78rem; color: var(--muted); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -602,8 +718,6 @@
         <div class="side-content" id="historyBox"></div>
       </div>
       <div class="sidebar-footer">
-        <input id="apiKeyInput" class="history-search" type="password" autocomplete="off" placeholder="API key (nếu server bật API_KEY)" style="margin-top:0.35rem" />
-        <button class="account-btn" type="button" id="apiKeySaveBtn">Lưu API key (session tab)</button>
         <button class="account-btn" type="button">Tài khoản: Người dùng</button>
         <button class="collapse-btn" id="collapseSidebarBtn" type="button">Thu gọn thanh bên</button>
       </div>
@@ -634,45 +748,50 @@
           <div class="mode-switch">
             <button class="mode-btn active" id="modeLaw">Pháp luật</button>
             <button class="mode-btn cos" id="modeCosing">CoSIng</button>
-          </div>
-          <div class="law-group-row" id="lawGroupRow">
-            <label for="lawGroupSelect">Nhóm tài liệu</label>
-            <select id="lawGroupSelect" aria-label="Lọc nhóm tài liệu pháp luật">
+            <select id="lawGroupSelect" class="group-inline" aria-label="Lọc nhóm tài liệu pháp luật">
               <option value="">Tất cả nhóm</option>
             </select>
           </div>
-          <div class="ingest-row" id="ingestRow">
-            <input type="file" id="ingestFileInput" accept=".pdf,.png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" style="display:none" />
-            <button type="button" class="batch-csv-btn" id="ingestPickBtn">Tải tài liệu (PDF/Ảnh)</button>
-            <button type="button" class="batch-csv-btn hidden" id="ingestClearBtn">Bỏ file</button>
-            <span class="cosing-file-name" id="ingestFileName"></span>
-            <input type="text" id="ingestTitleInput" placeholder="Tiêu đề tài liệu (tuỳ chọn)" />
-            <input type="text" id="ingestTagInput" placeholder="Tag/nhóm (vd: my_pham, thuc_pham)" />
-            <button type="button" class="batch-csv-btn" id="ingestUploadBtn">Nạp vào hệ thống</button>
-            <label style="font-size:0.76rem;color:var(--muted);display:inline-flex;align-items:center;gap:0.28rem;">
-              <input type="checkbox" id="ingestAutoApprove" checked />
-              Tự duyệt + rebuild index
-            </label>
-            <div class="ingest-note">File sẽ được trích xuất text rồi đưa vào kho. Nếu tắt tự duyệt, tài liệu sẽ ở trạng thái pending để duyệt sau.</div>
-            <div class="pending-wrap">
-              <div class="pending-head">
-                <span>Danh sách tài liệu pending</span>
-                <button type="button" class="batch-csv-btn" id="ingestPendingReloadBtn" style="margin-top:0;padding:0.26rem 0.55rem;">Tải lại</button>
-              </div>
-              <div class="pending-list" id="ingestPendingList"></div>
-            </div>
+          <div class="quick-actions">
+            <button type="button" class="action-btn plus" id="quickAttachBtn" title="Đính kèm file">+</button>
+            <button type="button" class="action-btn" id="toolToggleBtn" aria-expanded="false">Công cụ ▾</button>
           </div>
-          <div class="cosing-file-row hidden" id="cosingFileRow">
-            <input type="file" id="cosingFileInput" accept=".txt,.csv,text/plain,text/csv" style="display:none" />
-            <button type="button" class="batch-csv-btn" id="cosingFilePickBtn">Chọn file .txt / .csv</button>
-            <button type="button" class="batch-csv-btn hidden" id="cosingFileClearBtn">Bỏ file</button>
-            <span class="cosing-file-name" id="cosingFileName"></span>
+          <div class="attachment-chips hidden" id="attachmentChips"></div>
+          <div class="tool-panel hidden" id="toolPanel">
+            <div class="ingest-row" id="ingestRow">
+              <input type="file" id="ingestFileInput" accept=".pdf,.png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" style="display:none" />
+              <button type="button" class="batch-csv-btn" id="ingestPickBtn">Tải tài liệu (PDF/Ảnh)</button>
+              <button type="button" class="batch-csv-btn hidden" id="ingestClearBtn">Bỏ file</button>
+              <span class="cosing-file-name" id="ingestFileName"></span>
+              <button type="button" class="batch-csv-btn" id="ingestUploadBtn">Nạp vào hệ thống</button>
+              <button type="button" class="batch-csv-btn" id="ingestAdvancedToggle">Nâng cao ▾</button>
+              <div class="ingest-advanced hidden" id="ingestAdvancedOptions">
+                <input type="text" id="ingestTitleInput" placeholder="Tiêu đề tài liệu (tuỳ chọn)" />
+                <input type="text" id="ingestTagInput" placeholder="Tag/nhóm (vd: my_pham, thuc_pham)" />
+                <label style="font-size:0.76rem;color:var(--muted);display:inline-flex;align-items:center;gap:0.28rem;">
+                  <input type="checkbox" id="ingestAutoApprove" checked />
+                  Tự duyệt + rebuild index
+                </label>
+                <div class="ingest-note">File sẽ được trích xuất text rồi đưa vào kho. Nếu tắt tự duyệt, tài liệu sẽ ở trạng thái pending để duyệt sau.</div>
+              </div>
+              <div class="pending-wrap hidden" id="ingestPendingWrap">
+                <div class="pending-head">
+                  <span>Danh sách tài liệu pending</span>
+                </div>
+                <div class="pending-list" id="ingestPendingList"></div>
+              </div>
+            </div>
+            <div class="cosing-file-row hidden" id="cosingFileRow">
+              <input type="file" id="cosingFileInput" accept=".txt,.csv,text/plain,text/csv" style="display:none" />
+              <button type="button" class="batch-csv-btn" id="cosingFilePickBtn">Chọn file .txt / .csv</button>
+              <button type="button" class="batch-csv-btn hidden" id="cosingFileClearBtn">Bỏ file</button>
+              <span class="cosing-file-name" id="cosingFileName"></span>
+            </div>
           </div>
           <div class="composer-row">
             <textarea id="input" placeholder="Nhập câu hỏi của bạn..."></textarea>
             <button class="send" id="sendBtn" title="Gửi" disabled>➤</button>
           </div>
-          <div class="sub-note" id="subNote">Mẹo: Enter để gửi, Shift+Enter để xuống dòng.</div>
           <div class="error hidden" id="error"></div>
         </div>
       </div>
@@ -682,18 +801,9 @@
   <script>
     (function () {
       const STORAGE_KEY = "chat_demo_sessions_v2";
-      function apiKeyHeaders() {
-        try {
-          var k = sessionStorage.getItem("demo_api_key");
-          if (k && String(k).trim()) return { "X-API-Key": String(k).trim() };
-        } catch (e) {}
-        return {};
-      }
       function apiFetch(url, init) {
         init = init || {};
-        var base = init.headers || {};
-        var merged = Object.assign({}, apiKeyHeaders(), base);
-        init.headers = merged;
+        init.headers = init.headers || {};
         return fetch(url, init);
       }
       const MAX_SESSIONS = 40;
@@ -710,6 +820,7 @@
       let currentId = "";
 
       const appEl = document.querySelector(".app");
+      const mainEl = document.querySelector(".main");
       const chatScroll = document.getElementById("chatScroll");
       const messagesEl = document.getElementById("messages");
       const emptyState = document.getElementById("emptyState");
@@ -720,7 +831,11 @@
       const modeCosingBtn = document.getElementById("modeCosing");
       const inputWrap = document.getElementById("inputWrap");
       const modeBadge = document.getElementById("modeBadge");
-      const subNote = document.getElementById("subNote");
+      const lawGroupSelect = document.getElementById("lawGroupSelect");
+      const quickAttachBtn = document.getElementById("quickAttachBtn");
+      const toolToggleBtn = document.getElementById("toolToggleBtn");
+      const toolPanel = document.getElementById("toolPanel");
+      const attachmentChips = document.getElementById("attachmentChips");
       const historyBox = document.getElementById("historyBox");
       const historySearch = document.getElementById("historySearch");
       const collapseSidebarBtn = document.getElementById("collapseSidebarBtn");
@@ -739,9 +854,13 @@
       const ingestTitleInput = document.getElementById("ingestTitleInput");
       const ingestTagInput = document.getElementById("ingestTagInput");
       const ingestAutoApprove = document.getElementById("ingestAutoApprove");
-      const ingestPendingReloadBtn = document.getElementById("ingestPendingReloadBtn");
+      const ingestAdvancedToggle = document.getElementById("ingestAdvancedToggle");
+      const ingestAdvancedOptions = document.getElementById("ingestAdvancedOptions");
+      const ingestPendingWrap = document.getElementById("ingestPendingWrap");
       const ingestPendingList = document.getElementById("ingestPendingList");
       let ingestPendingFile = null;
+      let toolsExpanded = false;
+      let ingestAdvancedExpanded = false;
       let historyQuery = "";
 
       function uid() { return "s-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
@@ -832,6 +951,7 @@
           sendBtn.title = "Dừng (chỉnh sửa hoặc bổ sung câu hỏi rồi gửi lại)";
           sendBtn.classList.add("send-stop");
           sendBtn.setAttribute("aria-label", "Dừng tạo câu trả lời");
+          renderAttachmentChips();
           return;
         }
         sendBtn.classList.remove("send-stop");
@@ -839,6 +959,29 @@
         sendBtn.title = "Gửi";
         sendBtn.setAttribute("aria-label", "Gửi");
         sendBtn.disabled = !canSend;
+        renderAttachmentChips();
+      }
+      function renderAttachmentChips() {
+        if (!attachmentChips) return;
+        const chips = [];
+        if (mode === "law" && ingestPendingFile) chips.push("Tài liệu: " + ingestPendingFile.name);
+        if (mode === "cosing" && cosingPendingFile) chips.push("Batch: " + cosingPendingFile.name);
+        attachmentChips.classList.toggle("hidden", chips.length === 0);
+        attachmentChips.innerHTML = chips
+          .map(function (text) { return '<div class="attachment-chip" title="' + escapeHtml(text) + '">' + escapeHtml(text) + "</div>"; })
+          .join("");
+      }
+      function setToolsExpanded(v) {
+        toolsExpanded = !!v;
+        if (toolPanel) toolPanel.classList.toggle("hidden", !toolsExpanded);
+        if (toolToggleBtn) {
+          toolToggleBtn.setAttribute("aria-expanded", toolsExpanded ? "true" : "false");
+          toolToggleBtn.textContent = toolsExpanded ? "Công cụ ▴" : "Công cụ ▾";
+          toolToggleBtn.classList.toggle("active", toolsExpanded);
+        }
+        if (quickAttachBtn) {
+          quickAttachBtn.classList.toggle("active", toolsExpanded);
+        }
       }
       function createSession() {
         const s = { id: uid(), title: "Đoạn chat mới", created_at: nowIso(), updated_at: nowIso(), messages: [] };
@@ -851,20 +994,24 @@
         mode = m === "cosing" ? "cosing" : "law";
         modeLawBtn.classList.toggle("active", mode === "law");
         modeCosingBtn.classList.toggle("active", mode === "cosing");
+        if (mainEl) {
+          mainEl.classList.toggle("mode-law", mode === "law");
+          mainEl.classList.toggle("mode-cos", mode === "cosing");
+        }
         inputWrap.classList.toggle("mode-cos", mode === "cosing");
         modeBadge.textContent = "Chế độ: " + (mode === "law" ? "Pháp luật" : "CoSIng");
-        document.getElementById("lawGroupRow").style.display = mode === "law" ? "flex" : "none";
+        if (lawGroupSelect) lawGroupSelect.classList.toggle("hidden", mode !== "law");
         ingestRow.classList.toggle("hidden", mode !== "law");
         cosingFileRow.classList.toggle("hidden", mode !== "cosing");
+        if (quickAttachBtn) quickAttachBtn.title = mode === "law" ? "Đính kèm tài liệu PDF/Ảnh" : "Đính kèm file .txt/.csv";
         if (mode !== "cosing") {
           cosingPendingFile = null;
           if (cosingFileInput) cosingFileInput.value = "";
           if (cosingFileName) cosingFileName.textContent = "";
           if (cosingFileClearBtn) cosingFileClearBtn.classList.add("hidden");
         }
-        subNote.textContent = mode === "law"
-          ? "Mẹo: Enter để gửi, Shift+Enter để xuống dòng. Có thể chọn nhóm tài liệu để thu hẹp phạm vi tra cứu (sau khi server đã rebuild index)."
-          : "Một dòng = một thành phần; nhiều dòng = batch. Hoặc chọn file .txt/.csv rồi bấm Gửi (upload server). Có thể mất lâu; bấm ô vuông trên nút gửi để dừng.";
+        setToolsExpanded(false);
+        renderAttachmentChips();
       }
       function resetIngestSelectedFile() {
         ingestPendingFile = null;
@@ -874,6 +1021,7 @@
       }
       async function refreshPendingIngestList() {
         if (!ingestPendingList) return;
+        if (ingestPendingWrap) ingestPendingWrap.classList.remove("hidden");
         ingestPendingList.innerHTML = '<div class="pending-empty">Đang tải...</div>';
         try {
           const r = await apiFetch("/api/ingest/pending");
@@ -881,9 +1029,11 @@
           if (!r.ok || !data || !Array.isArray(data.items)) throw new Error("Không tải được pending.");
           const items = data.items || [];
           if (!items.length) {
-            ingestPendingList.innerHTML = '<div class="pending-empty">Không có tài liệu chờ duyệt.</div>';
+            if (ingestPendingWrap) ingestPendingWrap.classList.add("hidden");
+            ingestPendingList.innerHTML = "";
             return;
           }
+          if (ingestPendingWrap) ingestPendingWrap.classList.remove("hidden");
           ingestPendingList.innerHTML = "";
           items.forEach(function (it) {
             const div = document.createElement("div");
@@ -947,6 +1097,7 @@
             ingestPendingList.appendChild(div);
           });
         } catch (e) {
+          if (ingestPendingWrap) ingestPendingWrap.classList.remove("hidden");
           ingestPendingList.innerHTML = '<div class="pending-empty">Không tải được danh sách pending.</div>';
         }
       }
@@ -1589,13 +1740,17 @@
       }
 
       document.getElementById("newChatBtn").addEventListener("click", function () { createSession(); });
-      document.getElementById("apiKeySaveBtn").addEventListener("click", function () {
-        var v = document.getElementById("apiKeyInput").value || "";
-        try {
-          sessionStorage.setItem("demo_api_key", v);
-        } catch (e) {}
-        showError(v.trim() ? "Đã lưu API key cho tab này." : "Đã xóa API key trong session.");
-        setTimeout(function () { showError(""); }, 2500);
+      quickAttachBtn.addEventListener("click", function () {
+        if (mode === "law") ingestFileInput.click();
+        else cosingFileInput.click();
+      });
+      toolToggleBtn.addEventListener("click", function () {
+        setToolsExpanded(!toolsExpanded);
+      });
+      ingestAdvancedToggle.addEventListener("click", function () {
+        ingestAdvancedExpanded = !ingestAdvancedExpanded;
+        ingestAdvancedOptions.classList.toggle("hidden", !ingestAdvancedExpanded);
+        ingestAdvancedToggle.textContent = ingestAdvancedExpanded ? "Nâng cao ▴" : "Nâng cao ▾";
       });
       cosingFilePickBtn.addEventListener("click", function () { cosingFileInput.click(); });
       ingestPickBtn.addEventListener("click", function () { ingestFileInput.click(); });
@@ -1609,9 +1764,6 @@
       });
       ingestUploadBtn.addEventListener("click", function () {
         uploadIngestDocument();
-      });
-      ingestPendingReloadBtn.addEventListener("click", function () {
-        refreshPendingIngestList();
       });
       cosingFileClearBtn.addEventListener("click", function () {
         cosingPendingFile = null;
@@ -1683,8 +1835,10 @@
       setMode("law");
       loadDocumentGroups();
       refreshPendingIngestList();
+      setInterval(refreshPendingIngestList, 15000);
       autoExpand();
       refreshSendState();
+      renderAttachmentChips();
       if (loadSidebarCollapsed()) appEl.classList.add("sidebar-collapsed");
     })();
   </script>

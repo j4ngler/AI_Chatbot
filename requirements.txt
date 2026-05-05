@@ -20,3 +20,8 @@ pytest
 httpx
 pillow
 pytesseract
+sqlalchemy>=2.0.0
+psycopg2-binary
+pyjwt
+openpyxl
+fpdf2

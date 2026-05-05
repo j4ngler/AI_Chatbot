@@ -60,6 +60,12 @@ def _env_flag(name: str, default: str = "") -> bool:
 async def _lifespan(app: FastAPI):  # noqa: ARG001
     """Khởi tạo vector store khi process sẵn sàng (thay cho on_event startup)."""
     _load_vector_store_from_disk()
+    try:
+        from api.erp_demo.database import init_db
+
+        init_db()
+    except Exception as e:
+        print(f"[WARN] ERP demo DB init: {e!r}")
     yield
 
 
@@ -94,7 +100,9 @@ def _get_ingest_store() -> Any:
 
 def _api_key_public_path(method: str, path: str) -> bool:
     """Khi bật API_KEY: các đường dẫn không cần key (demo web / poll)."""
-    if path in ("/api/document-groups", "/api/health"):
+    if path in ("/api/document-groups", "/api/health", "/api/erp/health"):
+        return True
+    if path == "/api/erp/auth/login" and method == "POST":
         return True
     if path == "/api/external-sources" and method == "GET":
         return True
@@ -157,6 +165,10 @@ class _SecurityMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(_SecurityMiddleware)
+
+from api.erp_demo.router import router as erp_demo_router
+
+app.include_router(erp_demo_router)
 
 
 _favicon_svg = PROJECT_ROOT / "demo_web" / "favicon.svg"
@@ -1277,6 +1289,10 @@ async def cosing_batch_job_events(job_id: str) -> StreamingResponse:
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
 
+
+_erp_dist = PROJECT_ROOT / "enterprise_web" / "dist"
+if _erp_dist.is_dir():
+    app.mount("/erp", StaticFiles(directory=str(_erp_dist), html=True), name="erp_demo")
 
 _demo_dir = PROJECT_ROOT / "demo_web"
 if _demo_dir.is_dir():

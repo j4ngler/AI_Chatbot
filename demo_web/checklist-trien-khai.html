@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checklist demo web — Luật Mai Trang</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --border: #2d3a4d;
+      --text: #e8edf4;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --ok: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 1.25rem 1rem 3rem;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.35rem; font-weight: 650; margin: 0 0 0.35rem; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.25rem; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.85rem;
+    }
+    section h2 {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 0 0 0.75rem;
+      font-weight: 600;
+    }
+    label.row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin: 0.4rem 0;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    label.row input { margin-top: 0.28rem; }
+    .field { margin: 0.65rem 0 0; }
+    .field label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.25rem; }
+    input[type="text"],
+    input[type="url"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.45rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #0c1118;
+      color: var(--text);
+      font: inherit;
+    }
+    textarea { min-height: 4.5rem; resize: vertical; }
+    select { cursor: pointer; }
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+    }
+    @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+    .radios label { margin-right: 1rem; cursor: pointer; }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0;
+      align-items: center;
+    }
+    button {
+      font: inherit;
+      padding: 0.5rem 0.9rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+    button:hover { background: var(--accent-hover); }
+    button.secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button.secondary:hover { border-color: var(--muted); }
+    .toast {
+      font-size: 0.85rem;
+      color: var(--ok);
+      min-height: 1.2rem;
+    }
+    #export {
+      width: 100%;
+      min-height: 220px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+    }
+    .hint { font-size: 0.8rem; color: var(--muted); margin-top: 0.35rem; }
+    hr.sep { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Checklist triển khai — Demo web Luật Mai Trang</h1>
+    <p class="sub">Chọn bằng click; chọn thêm trong danh sách. Dữ liệu lưu tự động trên trình duyệt này. Cuối trang: <strong>Tạo bản tóm tắt</strong> rồi <strong>Sao chép</strong> dán vào chat.</p>
+
+    <form id="f">
+      <section>
+        <h2>A. Mục tiêu &amp; khán giả</h2>
+        <div class="field">
+          <label for="goal">Mục tiêu demo</label>
+          <select id="goal" name="goal">
+            <option value="">— Chọn —</option>
+            <option>Giới thiệu năng lực quản trị nội bộ văn phòng luật</option>
+            <option>Chốt sale / demo cho khách hàng doanh nghiệp</option>
+            <option>Báo cáo nhanh cho lãnh đạo (dashboard)</option>
+            <option>Demo kỹ thuật tích hợp chatbot + ERP nhẹ</option>
+            <option value="__other__">Khác (ghi ở ô bên dưới)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="goal_other">Bổ sung mục tiêu (nếu chọn Khác hoặc cần chi tiết)</label>
+          <input type="text" id="goal_other" name="goal_other" placeholder="Tùy chọn" />
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="audience">Khán giả</label>
+            <select id="audience" name="audience">
+              <option value="">— Chọn —</option>
+              <option>Khách hàng / đối tác</option>
+              <option>Lãnh đạo / ban giám đốc</option>
+              <option>Đội nội bộ / nhân viên</option>
+              <option>Đội kỹ thuật / IT</option>
+              <option>Hỗn hợp (nhiều đối tượng)</option>
+              <option value="__other__">Khác</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="duration">Thời lượng trình bày</label>
+            <select id="duration" name="duration">
+              <option value="">— Chọn —</option>
+              <option>5 phút</option>
+              <option>10 phút</option>
+              <option>15 phút</option>
+              <option>20+ phút</option>
+              <option>Chưa xác định</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="ui_lang">Ngôn ngữ giao diện</label>
+          <select id="ui_lang" name="ui_lang">
+            <option value="">— Chọn —</option>
+            <option>Tiếng Việt</option>
+            <option>Tiếng Anh</option>
+            <option>Song ngữ (VI + EN)</option>
+          </select>
+        </div>
+      </section>
+
+      <section>
+        <h2>B. Phạm vi chức năng (v1)</h2>
+        <p class="hint">Tick các mục có trong bản demo đầu tiên.</p>
+        <label class="row"><input type="checkbox" name="feat_login" /> Đăng nhập / phân quyền</label>
+        <label class="row"><input type="checkbox" name="feat_dash" /> Dashboard tổng quan</label>
+        <label class="row"><input type="checkbox" name="feat_bot" /> Tích hợp chatbot pháp luật</label>
+        <label class="row"><input type="checkbox" name="feat_notify" /> Thông báo / nhắc việc</label>
+        <label class="row"><input type="checkbox" name="feat_export" /> Xuất PDF / Excel</label>
+        <hr class="sep" />
+        <label class="row"><input type="checkbox" name="feat_mod1" /> Danh mục nghiệp vụ 1</label>
+        <div class="field">
+          <label for="mod1_name">Tên nghiệp vụ 1 (nếu có)</label>
+          <select id="mod1_name" name="mod1_name">
+            <option value="">— Chọn hoặc bỏ trống —</option>
+            <option>Khách hàng / Doanh nghiệp</option>
+            <option>Hợp đồng / Soạn thảo</option>
+            <option>Vụ việc / Tố tụng</option>
+            <option>Tư vấn / Ticket</option>
+            <option>Hồ sơ / Tài liệu</option>
+            <option value="__other__">Khác</option>
+          </select>
+        </div>
+        <input type="text" name="mod1_other" placeholder="Tên khác cho nghiệp vụ 1" style="margin-top:0.35rem" />
+        <label class="row" style="margin-top:0.65rem"><input type="checkbox" name="feat_mod2" /> Danh mục nghiệp vụ 2</label>
+        <input type="text" name="mod2_name" placeholder="Tên nghiệp vụ 2" />
+        <label class="row" style="margin-top:0.65rem"><input type="checkbox" name="feat_mod3" /> Danh mục nghiệp vụ 3</label>
+        <input type="text" name="mod3_name" placeholder="Tên nghiệp vụ 3" />
+        <hr class="sep" />
+        <p class="hint">Vị trí chatbot trên UI</p>
+        <div class="radios">
+          <label><input type="radio" name="bot_ui" value="" checked /> Chưa chọn</label>
+          <label><input type="radio" name="bot_ui" value="sidebar" /> Sidebar</label>
+          <label><input type="radio" name="bot_ui" value="modal" /> Modal / popup</label>
+          <label><input type="radio" name="bot_ui" value="page" /> Trang riêng</label>
+        </div>
+        <div class="field" style="margin-top:0.5rem">
+          <label for="bot_ctx">Gửi kèm ngữ cảnh (công ty / user) cho chatbot?</label>
+          <select id="bot_ctx" name="bot_ctx">
+            <option value="">— Chọn —</option>
+            <option value="yes">Có</option>
+            <option value="no">Không (chỉ câu hỏi đơn)</option>
+            <option value="later">Để sau v1</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="out_of_scope">Ngoài phạm vi v1 (tránh làm lan)</label>
+          <textarea id="out_of_scope" name="out_of_scope" placeholder="Ví dụ: không làm kế toán đầy đủ, không đa tenant…"></textarea>
+        </div>
+      </section>
+
+      <section>
+        <h2>C. Kiến trúc kỹ thuật</h2>
+        <div class="grid2">
+          <div class="field">
+            <label for="fe_stack">Frontend</label>
+            <select id="fe_stack" name="fe_stack">
+              <option value="">— Chọn —</option>
+              <option>React (Vite)</option>
+              <option>Vue</option>
+              <option>Next.js</option>
+              <option>Svelte</option>
+              <option>HTML tĩnh + JS (nhẹ)</option>
+              <option value="__other__">Khác</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="be_stack">Backend web demo</label>
+            <select id="be_stack" name="be_stack">
+              <option value="">— Chọn —</option>
+              <option>Mở rộng FastAPI hiện có trong repo</option>
+              <option>Service riêng (Python)</option>
+              <option>Service riêng (Node)</option>
+              <option>Chủ yếu đọc/ghi qua Odoo API</option>
+              <option value="__other__">Khác / kết hợp</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="db_choice">Cơ sở dữ liệu</label>
+            <select id="db_choice" name="db_choice">
+              <option value="">— Chọn —</option>
+              <option>PostgreSQL (Docker)</option>
+              <option>SQLite (demo nhanh)</option>
+              <option>Dùng chung DB với Odoo</option>
+              <option>Chưa cần DB (mock)</option>
+              <option value="__other__">Khác</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="auth_choice">Xác thực</label>
+            <select id="auth_choice" name="auth_choice">
+              <option value="">— Chọn —</option>
+              <option>JWT</option>
+              <option>Session cookie</option>
+              <option>Đăng nhập qua Odoo</option>
+              <option>Không cần (demo localhost)</option>
+              <option value="__other__">Khác</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="deploy">Triển khai</label>
+          <select id="deploy" name="deploy">
+            <option value="">— Chọn —</option>
+            <option>Docker Compose trong repo này</option>
+            <option>Chỉ chạy local (không Docker)</option>
+            <option>Tách service / repo sau</option>
+            <option value="__other__">Khác</option>
+          </select>
+        </div>
+      </section>
+
+      <section>
+        <h2>D. Tích hợp repo hiện tại</h2>
+        <div class="field">
+          <label for="api_url">URL API chatbot (dev)</label>
+          <input type="url" id="api_url" name="api_url" placeholder="http://localhost:8000" />
+        </div>
+        <div class="field">
+          <label for="env_vars">Biến môi trường cần dùng (chỉ tên, không dán secret)</label>
+          <input type="text" id="env_vars" name="env_vars" placeholder="Ví dụ: OLLAMA_BASE_URL, OPENAI_API_KEY" />
+        </div>
+        <p class="hint">Odoo song song?</p>
+        <div class="radios">
+          <label><input type="radio" name="odoo_parallel" value="" checked /> Chưa chọn</label>
+          <label><input type="radio" name="odoo_parallel" value="yes" /> Có</label>
+          <label><input type="radio" name="odoo_parallel" value="no" /> Không</label>
+        </div>
+        <div class="field">
+          <label for="odoo_port">Port Odoo (nếu có)</label>
+          <input type="text" id="odoo_port" name="odoo_port" placeholder="8069" />
+        </div>
+        <div class="field">
+          <label for="odoo_data">V1 có đọc dữ liệu từ Odoo?</label>
+          <select id="odoo_data" name="odoo_data">
+            <option value="">— Chọn —</option>
+            <option value="yes">Có</option>
+            <option value="no">Không</option>
+            <option value="later">Để sau</option>
+          </select>
+        </div>
+      </section>
+
+      <section>
+        <h2>E. UI/UX &amp; thương hiệu</h2>
+        <div class="field">
+          <label for="colors">Màu / tham chiếu thương hiệu</label>
+          <select id="colors" name="colors">
+            <option value="">— Chọn —</option>
+            <option>Giống demo_web/index.html hiện tại (dark + xanh)</option>
+            <option>Sáng, tối giản (light)</option>
+            <option>Theo brand guideline (sẽ gửi file sau)</option>
+            <option value="__other__">Khác</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="colors_other">Mã màu hoặc mô tả (nếu Khác)</label>
+          <input type="text" id="colors_other" name="colors_other" placeholder="#hex hoặc mô tả" />
+        </div>
+        <div class="field">
+          <label for="font_choice">Font</label>
+          <select id="font_choice" name="font_choice">
+            <option value="">— Chọn —</option>
+            <option>Segoe UI / system-ui</option>
+            <option>Inter</option>
+            <option>Be Vietnam Pro</option>
+            <option value="__other__">Khác</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ui_ref">Tham chiếu giao diện</label>
+          <select id="ui_ref" name="ui_ref">
+            <option value="">— Chọn —</option>
+            <option>Dashboard admin tối giản</option>
+            <option>Phong cách gần Odoo</option>
+            <option>Figma / ảnh (sẽ bổ sung link sau)</option>
+            <option value="__other__">Khác</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="responsive">Responsive bắt buộc</label>
+          <select id="responsive" name="responsive">
+            <option value="">— Chọn —</option>
+            <option>Chủ yếu desktop</option>
+            <option>Desktop + tablet</option>
+            <option>Cả mobile</option>
+          </select>
+        </div>
+      </section>
+
+      <section>
+        <h2>F. Dữ liệu mẫu</h2>
+        <div class="field">
+          <label for="sample_volume">Quy mô dữ liệu mẫu (gần đúng)</label>
+          <select id="sample_volume" name="sample_volume">
+            <option value="">— Chọn —</option>
+            <option>Rất ít (≤ 10 bản ghi / loại)</option>
+            <option>Vừa (khoảng 10–50)</option>
+            <option>Nhiều (50+)</option>
+          </select>
+        </div>
+        <div class="radios">
+          <span class="hint" style="display:block;margin-bottom:0.35rem">Dữ liệu giả (tên công ty, SĐT…) được phép?</span>
+          <label><input type="radio" name="fake_ok" value="" checked /> Chưa chọn</label>
+          <label><input type="radio" name="fake_ok" value="yes" /> Có</label>
+          <label><input type="radio" name="fake_ok" value="no" /> Không</label>
+        </div>
+        <div class="field" style="margin-top:0.5rem">
+          <label for="seed">Script seed / nút reset demo</label>
+          <select id="seed" name="seed">
+            <option value="">— Chọn —</option>
+            <option>Cần script seed</option>
+            <option>Cần nút “reset demo”</option>
+            <option>Cả hai</option>
+            <option>Chưa cần</option>
+          </select>
+        </div>
+      </section>
+
+      <section>
+        <h2>G. Phi chức năng &amp; ngày demo</h2>
+        <div class="grid2">
+          <div class="field">
+            <label for="show_env">Môi trường trình chiếu</label>
+            <select id="show_env" name="show_env">
+              <option value="">— Chọn —</option>
+              <option>Windows + Chrome</option>
+              <option>Windows + Edge</option>
+              <option>macOS + Chrome/Safari</option>
+              <option value="__other__">Khác</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="offline">Cần chạy offline?</label>
+            <select id="offline" name="offline">
+              <option value="">— Chọn —</option>
+              <option value="yes">Có</option>
+              <option value="no">Không</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="constraints">Hạn chế / lưu ý</label>
+          <textarea id="constraints" name="constraints" placeholder="Ví dụ: không dùng cloud trả phí, chỉ localhost…"></textarea>
+        </div>
+      </section>
+
+      <section>
+        <h2>H. Ưu tiên &amp; deadline</h2>
+        <div class="field">
+          <label for="must_date">Must-have trước ngày</label>
+          <input type="text" id="must_date" name="must_date" placeholder="VD: 15/05/2026 hoặc mô tả" />
+        </div>
+        <div class="field">
+          <label for="nice_later">Nice-to-have sau</label>
+          <textarea id="nice_later" name="nice_later" placeholder="Ghi ngắn gọn"></textarea>
+        </div>
+        <div class="field">
+          <label for="free_notes">Ghi chú thêm (tùy chọn)</label>
+          <textarea id="free_notes" name="free_notes"></textarea>
+        </div>
+      </section>
+    </form>
+
+    <div class="actions">
+      <button type="button" id="btnBuild">Tạo bản tóm tắt</button>
+      <button type="button" class="secondary" id="btnCopy">Sao chép tóm tắt</button>
+      <button type="button" class="secondary" id="btnReset">Xóa form (local)</button>
+      <span class="toast" id="toast" aria-live="polite"></span>
+    </div>
+    <label for="export" class="hint" style="display:block;margin-bottom:0.25rem">Nội dung dán cho AI:</label>
+    <textarea id="export" readonly></textarea>
+  </div>
+
+  <script>
+    (function () {
+      var STORAGE_KEY = "luat_maitrang_demo_checklist_v1";
+      var form = document.getElementById("f");
+      var exportEl = document.getElementById("export");
+      var toast = document.getElementById("toast");
+
+      function showToast(msg) {
+        toast.textContent = msg || "";
+        if (msg) setTimeout(function () { toast.textContent = ""; }, 2800);
+      }
+
+      function collectFormData() {
+        var fd = new FormData(form);
+        var data = {};
+        fd.forEach(function (v, k) {
+          if (data[k] !== undefined) {
+            if (!Array.isArray(data[k])) data[k] = [data[k]];
+            data[k].push(v);
+          } else data[k] = v;
+        });
+        form.querySelectorAll("input[type=\"checkbox\"]").forEach(function (el) {
+          data[el.name] = el.checked;
+        });
+        form.querySelectorAll("input[type=\"radio\"]").forEach(function (el) {
+          if (el.checked) data[el.name] = el.value;
+        });
+        return data;
+      }
+
+      function val(data, key) {
+        var x = data[key];
+        if (x === true) return "Có";
+        if (x === false) return "Không";
+        if (Array.isArray(x)) return x.filter(Boolean).join(", ");
+        return (x || "").toString().trim();
+      }
+
+      function line(title, value) {
+        if (!value) return "";
+        return "- **" + title + ":** " + value + "\n";
+      }
+
+      function buildMarkdown() {
+        var d = collectFormData();
+        var goal = val(d, "goal");
+        if (goal === "__other__") goal = val(d, "goal_other") || "Khác";
+        else if (val(d, "goal_other")) goal = goal + " — " + val(d, "goal_other");
+
+        var audience = val(d, "audience");
+        if (audience === "__other__") audience = "Khác (bổ sung trong ghi chú)";
+
+        var mod1 = val(d, "mod1_name");
+        if (mod1 === "__other__") mod1 = val(d, "mod1_other");
+        else if (val(d, "mod1_other") && mod1) mod1 += " / " + val(d, "mod1_other");
+
+        var feats = [];
+        if (d.feat_login) feats.push("Đăng nhập / phân quyền");
+        if (d.feat_dash) feats.push("Dashboard");
+        if (d.feat_bot) feats.push("Chatbot pháp luật");
+        if (d.feat_notify) feats.push("Thông báo / nhắc việc");
+        if (d.feat_export) feats.push("Xuất PDF/Excel");
+        if (d.feat_mod1) feats.push("Nghiệp vụ 1" + (mod1 ? " (" + mod1 + ")" : ""));
+        if (d.feat_mod2) feats.push("Nghiệp vụ 2" + (val(d, "mod2_name") ? " (" + val(d, "mod2_name") + ")" : ""));
+        if (d.feat_mod3) feats.push("Nghiệp vụ 3" + (val(d, "mod3_name") ? " (" + val(d, "mod3_name") + ")" : ""));
+
+        var botUi = val(d, "bot_ui");
+        var botUiLabel = { sidebar: "Sidebar", modal: "Modal", page: "Trang riêng" }[botUi] || (botUi || "");
+
+        var odooPar = val(d, "odoo_parallel");
+        var odooParLabel = odooPar === "yes" ? "Có" : odooPar === "no" ? "Không" : "";
+
+        var fake = val(d, "fake_ok");
+        var fakeLabel = fake === "yes" ? "Có" : fake === "no" ? "Không" : "";
+
+        var fe = val(d, "fe_stack");
+        if (fe === "__other__") fe = "Khác";
+        var be = val(d, "be_stack");
+        if (be === "__other__") be = "Khác / kết hợp";
+        var db = val(d, "db_choice");
+        if (db === "__other__") db = "Khác";
+
+        var colors = val(d, "colors");
+        if (colors === "__other__") colors = val(d, "colors_other") || "Khác";
+        else if (val(d, "colors_other")) colors += " — " + val(d, "colors_other");
+
+        var out =
+          "## Checklist demo web — Luật Mai Trang (đã điền)\n\n" +
+          "### A. Mục tiêu & khán giả\n" +
+          line("Mục tiêu demo", goal) +
+          line("Khán giả", audience) +
+          line("Thời lượng", val(d, "duration")) +
+          line("Ngôn ngữ UI", val(d, "ui_lang")) +
+          "\n### B. Phạm vi v1\n" +
+          (feats.length ? "- **Chức năng:** " + feats.join("; ") + "\n" : "") +
+          line("Vị trí chatbot UI", botUiLabel) +
+          line("Ngữ cảnh cho chatbot", val(d, "bot_ctx") === "yes" ? "Có" : val(d, "bot_ctx") === "no" ? "Không" : val(d, "bot_ctx") === "later" ? "Để sau v1" : "") +
+          line("Ngoài phạm vi v1", val(d, "out_of_scope")) +
+          "\n### C. Kiến trúc\n" +
+          line("Frontend", fe) +
+          line("Backend", be) +
+          line("CSDL", db) +
+          line("Auth", val(d, "auth_choice")) +
+          line("Triển khai", val(d, "deploy")) +
+          "\n### D. Tích hợp repo\n" +
+          line("URL API chatbot", val(d, "api_url")) +
+          line("Biến môi trường (tên)", val(d, "env_vars")) +
+          line("Odoo chạy song song", odooParLabel) +
+          line("Port Odoo", val(d, "odoo_port")) +
+          line("Đọc dữ liệu Odoo trong v1", val(d, "odoo_data") === "yes" ? "Có" : val(d, "odoo_data") === "no" ? "Không" : val(d, "odoo_data") === "later" ? "Để sau" : "") +
+          "\n### E. UI/UX\n" +
+          line("Màu / brand", colors) +
+          line("Font", val(d, "font_choice")) +
+          line("Tham chiếu UI", val(d, "ui_ref")) +
+          line("Responsive", val(d, "responsive")) +
+          "\n### F. Dữ liệu mẫu\n" +
+          line("Quy mô mẫu", val(d, "sample_volume")) +
+          line("Dữ liệu giả được phép", fakeLabel) +
+          line("Seed / reset", val(d, "seed")) +
+          "\n### G. Phi chức năng\n" +
+          line("Môi trường trình chiếu", val(d, "show_env")) +
+          line("Offline", val(d, "offline") === "yes" ? "Có" : val(d, "offline") === "no" ? "Không" : "") +
+          line("Hạn chế", val(d, "constraints")) +
+          "\n### H. Ưu tiên\n" +
+          line("Must-have trước", val(d, "must_date")) +
+          line("Nice-to-have sau", val(d, "nice_later")) +
+          line("Ghi chú thêm", val(d, "free_notes")) +
+          "\n---\n*(Nội dung do checklist HTML tạo — dán vào chat để triển khai.)*\n";
+
+        return out.replace(/\n{3,}/g, "\n\n").trim();
+      }
+
+      function save() {
+        try {
+          var d = collectFormData();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+        } catch (e) {}
+      }
+
+      function load() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          var d = JSON.parse(raw);
+          form.querySelectorAll("input, select, textarea").forEach(function (el) {
+            var n = el.name;
+            if (!n || el.type === "button") return;
+            if (el.type === "checkbox") {
+              el.checked = !!d[n];
+              return;
+            }
+            if (el.type === "radio") {
+              el.checked = d[n] === el.value;
+              return;
+            }
+            if (d[n] !== undefined && typeof d[n] !== "boolean") el.value = d[n];
+          });
+        } catch (e) {}
+      }
+
+      form.addEventListener("change", save);
+      form.addEventListener("input", save);
+
+      document.getElementById("btnBuild").addEventListener("click", function () {
+        exportEl.value = buildMarkdown();
+        showToast("Đã tạo bản tóm tắt.");
+      });
+
+      document.getElementById("btnCopy").addEventListener("click", function () {
+        if (!exportEl.value) exportEl.value = buildMarkdown();
+        exportEl.select();
+        navigator.clipboard.writeText(exportEl.value).then(function () {
+          showToast("Đã sao chép vào clipboard.");
+        }).catch(function () {
+          showToast("Không sao chép được — chọn Ctrl+C trong ô bên dưới.");
+        });
+      });
+
+      document.getElementById("btnReset").addEventListener("click", function () {
+        if (!confirm("Xóa toàn bộ lựa chọn đã lưu trên trình duyệt này?")) return;
+        form.reset();
+        localStorage.removeItem(STORAGE_KEY);
+        exportEl.value = "";
+        showToast("Đã xóa.");
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+; Sao chép thành odoo.conf và chỉnh đường dẫn nếu cần.
+; Hoặc chỉ dùng scripts/run_odoo.ps1 (tự tính addons_path).
+
+[options]
+; addons_path = D:\Intern\Chatbot_LuatMaiTrang\vendor\odoo\addons,D:\Intern\Chatbot_LuatMaiTrang\vendor\odoo\odoo\addons,D:\Intern\Chatbot_LuatMaiTrang\odoo_addons
+; data_dir = D:\Intern\Chatbot_LuatMaiTrang\.odoo_data
+; admin_passwd = dat_mat_khau_quan_tri
+; http_port = 8069
+; db_host = False
+; db_port = False
+; db_user = odoo
+; db_password = False
